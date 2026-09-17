@@ -61,11 +61,16 @@ export function evaluateNudges(state: HealthState, now = new Date()): Nudge[] {
 
   if (today.temperatureC >= 37.2 && today.waterMl < state.profile.goalWaterMl * 0.7) {
     if (!existingTypes.has("temperature") && !existingTypes.has("hydrate")) {
+      const ringSrc = state.integrations.find(
+        (i) =>
+          i.connected && (i.id === "gabit" || i.id === "ultrahuman")
+      );
+      const via = ringSrc ? ` via ${ringSrc.name}` : "";
       next.push({
         id: uid("nudge"),
         type: "temperature",
         title: "Body temperature is elevated",
-        body: `You're at ${today.temperatureC.toFixed(1)}°C with only ${today.waterMl} ml logged. Drink a full glass of water now and ease activity until you cool down.`,
+        body: `You're at ${today.temperatureC.toFixed(1)}°C${via} with only ${today.waterMl} ml logged. Drink a full glass of water now and ease activity until you cool down.`,
         priority: "urgent",
         createdAt: now.toISOString(),
         dismissed: false,
@@ -180,7 +185,7 @@ export function formatRelative(iso: string | null): string {
 }
 
 export function defaultFood(
-  profile: Profile
+  _profile: Profile
 ): Omit<FoodEntry, "id"> {
   return {
     date: todayKey(),

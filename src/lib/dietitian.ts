@@ -192,6 +192,12 @@ export function buildWeeklyInsight(state: HealthState): WeeklyInsight {
     wins.push("Sleep mostly stayed in a workable range.");
   }
 
+  if (movementScore >= 70) {
+    wins.push(`Movement score ${movementScore}/100 — activity habit is taking shape.`);
+  }
+
+  wins.push("Connected apps kept steps, sleep, and food in one Helia summary.");
+
   const latest = state.reports[0];
   if (latest) {
     const flags = latest.markers.filter((m) => m.flag !== "normal");

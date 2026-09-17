@@ -20,7 +20,7 @@ import type {
   Profile,
 } from "./types";
 
-const STORAGE_KEY = "helia-health-v1";
+const STORAGE_KEY = "helia-health-v2";
 
 type HealthContextValue = {
   state: HealthState;
@@ -38,14 +38,33 @@ type HealthContextValue = {
 
 const HealthContext = createContext<HealthContextValue | null>(null);
 
+function mergeIntegrations(saved: HealthState): HealthState {
+  const seed = createSeedState();
+  const byId = new Map(saved.integrations?.map((i) => [i.id, i]));
+  const integrations = seed.integrations.map((fresh) => {
+    const prev = byId.get(fresh.id);
+    if (!prev) return fresh;
+    return {
+      ...fresh,
+      connected: prev.connected,
+      lastSync: prev.connected
+        ? prev.lastSync ?? fresh.lastSync
+        : prev.lastSync,
+    };
+  });
+  return { ...saved, integrations };
+}
+
 function loadState(): HealthState {
   if (typeof window === "undefined") return createSeedState();
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw =
+      localStorage.getItem(STORAGE_KEY) ??
+      localStorage.getItem("helia-health-v1");
     if (!raw) return createSeedState();
     const parsed = JSON.parse(raw) as HealthState;
     if (!parsed?.profile || !parsed?.days) return createSeedState();
-    return parsed;
+    return mergeIntegrations(parsed);
   } catch {
     return createSeedState();
   }
