@@ -4,7 +4,7 @@ Unify your health apps into one weekly brief and an autonomous wellness companio
 
 ## What it does
 
-- **Connections** — Apple Health, Google Fit, Fitbit, Garmin, MyFitnessPal, Strava, Withings, Oura (demo sync toggles)
+- **Connections** — Gabit Ring, Ultrahuman, Google Fit, Apple Health (priority), plus Fitbit, Garmin, MyFitnessPal, Strava, Withings, Oura
 - **Activity** — steps, active minutes, sedentary watch
 - **Nutrition** — food log, calories, macros
 - **Labs** — blood report markers with lifestyle flags

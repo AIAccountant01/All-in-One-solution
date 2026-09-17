@@ -19,28 +19,56 @@ function hoursAgo(h: number): string {
 
 const INTEGRATIONS: Integration[] = [
   {
-    id: "apple_health",
-    name: "Apple Health",
-    category: "activity",
-    description: "Steps, heart rate, workouts, and vitals from iPhone & Watch.",
+    id: "gabit",
+    name: "Gabit Ring",
+    category: "ring",
+    description:
+      "Smart ring for recovery, sleep, HR/HRV, skin temperature, steps, stress, and nutrition via the Gabit app.",
     connected: true,
-    lastSync: hoursAgo(0.3),
+    lastSync: hoursAgo(0.2),
+    primary: true,
+    metrics: ["Sleep", "HRV", "Temp", "Steps", "Recovery", "Stress"],
+  },
+  {
+    id: "ultrahuman",
+    name: "Ultrahuman",
+    category: "ring",
+    description:
+      "Ring AIR recovery index, sleep stages, temperature, HRV, movement — plus CGM when you use Ultrahuman M1.",
+    connected: true,
+    lastSync: hoursAgo(0.4),
+    primary: true,
+    metrics: ["Recovery", "Sleep", "HRV", "Temp", "Glucose"],
   },
   {
     id: "google_fit",
     name: "Google Fit",
     category: "activity",
-    description: "Activity and movement history from Android devices.",
-    connected: false,
-    lastSync: null,
+    description:
+      "Android activity hub — steps, workouts, and Heart Points. Bridges Health Connect sources on Android.",
+    connected: true,
+    lastSync: hoursAgo(0.6),
+    primary: true,
+    metrics: ["Steps", "Workouts", "Calories"],
+  },
+  {
+    id: "apple_health",
+    name: "Apple Health",
+    category: "activity",
+    description:
+      "iPhone HealthKit hub — pulls Watch, Gabit, Ultrahuman, and other apps into one permissioned stream.",
+    connected: true,
+    lastSync: hoursAgo(0.3),
+    primary: true,
+    metrics: ["Steps", "Heart", "Sleep", "Workouts"],
   },
   {
     id: "fitbit",
     name: "Fitbit",
     category: "activity",
     description: "Steps, sleep stages, and resting heart rate.",
-    connected: true,
-    lastSync: hoursAgo(1.2),
+    connected: false,
+    lastSync: null,
   },
   {
     id: "garmin",
@@ -71,16 +99,16 @@ const INTEGRATIONS: Integration[] = [
     name: "Withings",
     category: "vitals",
     description: "Weight, blood pressure, and body composition.",
-    connected: true,
-    lastSync: hoursAgo(6),
+    connected: false,
+    lastSync: null,
   },
   {
     id: "oura",
     name: "Oura",
     category: "sleep",
     description: "Sleep score, readiness, and temperature trends.",
-    connected: true,
-    lastSync: hoursAgo(2),
+    connected: false,
+    lastSync: null,
   },
 ];
 
