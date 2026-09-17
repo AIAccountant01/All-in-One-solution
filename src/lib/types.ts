@@ -8,6 +8,8 @@ export type Section =
   | "assistant";
 
 export type IntegrationId =
+  | "gabit"
+  | "ultrahuman"
   | "apple_health"
   | "google_fit"
   | "fitbit"
@@ -20,11 +22,21 @@ export type IntegrationId =
 export type Integration = {
   id: IntegrationId;
   name: string;
-  category: "activity" | "nutrition" | "vitals" | "sleep";
+  category: "activity" | "nutrition" | "vitals" | "sleep" | "ring";
   description: string;
   connected: boolean;
   lastSync: string | null;
+  primary?: boolean;
+  metrics?: string[];
 };
+
+/** Core sources Helia is built around for you */
+export const PRIMARY_INTEGRATION_IDS: IntegrationId[] = [
+  "gabit",
+  "ultrahuman",
+  "google_fit",
+  "apple_health",
+];
 
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 

@@ -46,6 +46,10 @@ export function TodayView({ onNavigate }: { onNavigate: (s: Section) => void }) 
   const today = getToday(state);
   const macros = macrosForDate(state.foods, today.date);
   const rec = buildDietRecommendations(state)[0];
+  const priority = ["gabit", "ultrahuman", "google_fit", "apple_health"] as const;
+  const syncSources = priority
+    .map((id) => state.integrations.find((i) => i.id === id))
+    .filter(Boolean);
 
   return (
     <div className="space-y-5">
@@ -59,9 +63,28 @@ export function TodayView({ onNavigate }: { onNavigate: (s: Section) => void }) 
           All your health signals, one clear picture.
         </h2>
         <p className="mt-3 max-w-xl text-[var(--ink-soft)]">
-          Steps, meals, labs, and connected apps flow into weekly insights — plus autonomous
-          nudges when you should drink, move, or ease off.
+          Gabit, Ultrahuman, Google Fit, and Apple Health feed steps, sleep, temperature, and
+          recovery into weekly insights — plus autonomous nudges when you should drink, move, or
+          ease off.
         </p>
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          {syncSources.map((src) => (
+            <button
+              key={src!.id}
+              type="button"
+              onClick={() => onNavigate("connections")}
+              className={`rounded-xl px-3 py-1.5 text-xs font-semibold ${
+                src!.connected
+                  ? "bg-[var(--ok-soft)] text-[var(--ok)]"
+                  : "bg-white/70 text-[var(--muted)]"
+              }`}
+            >
+              {src!.name}: {src!.connected ? "synced" : "connect"}
+            </button>
+          ))}
+        </div>
+
         <div className="mt-6 flex flex-wrap gap-3">
           <button
             type="button"
