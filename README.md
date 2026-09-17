@@ -1,31 +1,25 @@
-# Helia — Mobile Personal Health Assistant
+# Helia monorepo
 
-Installable mobile health app (PWA) that unifies your rings and phone health hubs.
+## Stop — read this first
 
-## Run on your phone
+We run a **4-agent product loop** before treating the consumer app as V1:
+
+**User → Product Manager → Coder → QA → (repeat until all approve)**
+
+See [`product-loop/README.md`](./product-loop/README.md).
+
+The mobile Helia UI in this repo is a **prototype**. App creation / V1 ship is authorized only when `product-loop/workspace/v1-status.json` has `"gate_open": true`.
+
+## Prototype (not V1-final)
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the local URL on your phone (same Wi‑Fi), or use Chrome DevTools device mode. On iOS/Android, **Add to Home Screen** for an app-like fullscreen experience (`manifest.webmanifest`).
+## Product loop (authoritative process)
 
-## Core connections
-
-- Gabit Ring
-- Ultrahuman
-- Google Fit
-- Apple Health
-
-## Tabs
-
-- **Today** — overview + quick actions
-- **Move** — steps & sedentary watch
-- **Eat** — food & calories
-- **Week** — weekly summary
-- **More** — Assistant, Apps, Labs, Live nudges
-
-## Important
-
-Helia is a **wellness assistant**, not a medical device.
+```bash
+export PATH="$HOME/.nvm/versions/node/v24.21.0/bin:$PATH"  # Node 24+
+cd product-loop && npm install && npm run dev
+```
