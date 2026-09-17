@@ -7,20 +7,20 @@ import type { Section } from "@/lib/types";
 
 function Ring({ value, label }: { value: number; label: string }) {
   const pct = Math.min(100, value);
-  const r = 36;
+  const r = 28;
   const c = 2 * Math.PI * r;
   const offset = c - (pct / 100) * c;
   return (
-    <div className="flex flex-col items-center gap-2">
-      <svg width="96" height="96" className="-rotate-90">
-        <circle cx="48" cy="48" r={r} fill="none" stroke="rgba(18,32,28,0.08)" strokeWidth="10" />
+    <div className="flex flex-col items-center gap-1 py-1">
+      <svg width="76" height="76" className="-rotate-90">
+        <circle cx="38" cy="38" r={r} fill="none" stroke="rgba(18,32,28,0.08)" strokeWidth="8" />
         <circle
-          cx="48"
-          cy="48"
+          cx="38"
+          cy="38"
           r={r}
           fill="none"
           stroke="url(#ring)"
-          strokeWidth="10"
+          strokeWidth="8"
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={offset}
@@ -33,10 +33,10 @@ function Ring({ value, label }: { value: number; label: string }) {
           </linearGradient>
         </defs>
       </svg>
-      <div className="-mt-16 text-center">
-        <div className="text-lg font-bold">{pct}%</div>
+      <div className="-mt-12 text-center">
+        <div className="text-sm font-bold">{pct}%</div>
       </div>
-      <div className="mt-8 text-xs font-medium text-[var(--muted)]">{label}</div>
+      <div className="mt-6 text-[10px] font-medium text-[var(--muted)]">{label}</div>
     </div>
   );
 }
@@ -52,65 +52,55 @@ export function TodayView({ onNavigate }: { onNavigate: (s: Section) => void }) 
     .filter(Boolean);
 
   return (
-    <div className="space-y-5">
-      <section className="panel relative overflow-hidden p-6 md:p-8 animate-rise">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-[rgba(26,165,140,0.18)] blur-2xl" />
-        <div className="pointer-events-none absolute bottom-0 left-1/3 h-40 w-40 rounded-full bg-[rgba(217,119,6,0.12)] blur-2xl" />
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--brand)]">
-          Helia
+    <div className="space-y-4">
+      <section className="panel relative overflow-hidden p-5 animate-rise">
+        <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-[rgba(26,165,140,0.18)] blur-2xl" />
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--brand)]">
+          Your day
         </p>
-        <h2 className="display mt-2 max-w-2xl text-4xl leading-tight md:text-5xl">
-          All your health signals, one clear picture.
+        <h2 className="display mt-1 text-[1.75rem] leading-tight">
+          Health in one glance
         </h2>
-        <p className="mt-3 max-w-xl text-[var(--ink-soft)]">
-          Gabit, Ultrahuman, Google Fit, and Apple Health feed steps, sleep, temperature, and
-          recovery into weekly insights — plus autonomous nudges when you should drink, move, or
-          ease off.
+        <p className="mt-2 text-sm text-[var(--ink-soft)]">
+          Gabit, Ultrahuman, Google Fit &amp; Apple Health — plus nudges when you should drink or move.
         </p>
 
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-1.5">
           {syncSources.map((src) => (
             <button
               key={src!.id}
               type="button"
               onClick={() => onNavigate("connections")}
-              className={`rounded-xl px-3 py-1.5 text-xs font-semibold ${
+              className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold ${
                 src!.connected
                   ? "bg-[var(--ok-soft)] text-[var(--ok)]"
                   : "bg-white/70 text-[var(--muted)]"
               }`}
             >
-              {src!.name}: {src!.connected ? "synced" : "connect"}
+              {src!.name.split(" ")[0]}
             </button>
           ))}
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="mt-4 grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={() => addWater(250)}
-            className="rounded-2xl bg-[var(--brand)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--brand-deep)]"
+            className="rounded-2xl bg-[var(--brand)] px-3 py-3 text-sm font-semibold text-white"
           >
-            Log 250 ml water
+            +250 ml water
           </button>
           <button
             type="button"
             onClick={logMovement}
-            className="rounded-2xl bg-[var(--accent-soft)] px-4 py-3 text-sm font-semibold text-[var(--accent)]"
+            className="rounded-2xl bg-[var(--accent-soft)] px-3 py-3 text-sm font-semibold text-[var(--accent)]"
           >
             I just moved
-          </button>
-          <button
-            type="button"
-            onClick={() => onNavigate("weekly")}
-            className="rounded-2xl border border-[var(--line)] bg-white/70 px-4 py-3 text-sm font-semibold"
-          >
-            Open weekly summary
           </button>
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 animate-rise-delay-1">
+      <section className="grid grid-cols-2 gap-3 animate-rise-delay-1">
         {[
           {
             label: "Steps",
@@ -133,25 +123,21 @@ export function TodayView({ onNavigate }: { onNavigate: (s: Section) => void }) 
             meta: today.temperatureC >= 37.2 ? "Elevated — hydrate" : "In typical range",
           },
         ].map((kpi) => (
-          <div key={kpi.label} className="panel p-5">
-            <p className="text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
+          <div key={kpi.label} className="panel p-4">
+            <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--muted)]">
               {kpi.label}
             </p>
-            <p className="display mt-2 text-3xl">{kpi.value}</p>
-            <p className="mt-1 text-sm text-[var(--ink-soft)]">{kpi.meta}</p>
+            <p className="display mt-1 text-2xl">{kpi.value}</p>
+            <p className="mt-1 text-xs text-[var(--ink-soft)]">{kpi.meta}</p>
           </div>
         ))}
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr] animate-rise-delay-2">
-        <div className="panel p-6">
-          <div className="mb-5 flex items-end justify-between gap-3">
-            <div>
-              <h3 className="display text-2xl">Today&apos;s progress</h3>
-              <p className="text-sm text-[var(--muted)]">Goals vs live signals</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap justify-around gap-4">
+      <section className="space-y-3 animate-rise-delay-2">
+        <div className="panel p-5">
+          <h3 className="display text-xl">Today&apos;s progress</h3>
+          <p className="text-xs text-[var(--muted)]">Goals vs live signals</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
             <Ring value={progressPct(today.steps, state.profile.goalSteps)} label="Steps" />
             <Ring
               value={progressPct(macros.calories, state.profile.goalCalories)}
@@ -166,7 +152,7 @@ export function TodayView({ onNavigate }: { onNavigate: (s: Section) => void }) 
               label="Protein"
             />
           </div>
-          <div className="mt-6 space-y-3">
+          <div className="mt-4 space-y-2">
             {[
               ["Active minutes", `${today.activeMinutes} min`],
               ["Sleep last night", `${today.sleepHours.toFixed(1)} h`],
@@ -184,11 +170,11 @@ export function TodayView({ onNavigate }: { onNavigate: (s: Section) => void }) 
           </div>
         </div>
 
-        <div className="panel p-6">
-          <h3 className="display text-2xl">Dietitian pick</h3>
+        <div className="panel p-5">
+          <h3 className="display text-xl">Dietitian pick</h3>
           <p className="mt-1 text-sm text-[var(--muted)]">{rec?.title}</p>
-          <p className="mt-4 text-sm leading-relaxed text-[var(--ink-soft)]">{rec?.reason}</p>
-          <ul className="mt-4 space-y-2">
+          <p className="mt-3 text-sm leading-relaxed text-[var(--ink-soft)]">{rec?.reason}</p>
+          <ul className="mt-3 space-y-2">
             {rec?.meals.slice(0, 3).map((m) => (
               <li
                 key={m}
@@ -201,7 +187,7 @@ export function TodayView({ onNavigate }: { onNavigate: (s: Section) => void }) 
           <button
             type="button"
             onClick={() => onNavigate("assistant")}
-            className="mt-5 text-sm font-semibold text-[var(--brand)]"
+            className="mt-4 text-sm font-semibold text-[var(--brand)]"
           >
             See full recommendations →
           </button>

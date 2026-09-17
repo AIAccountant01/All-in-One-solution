@@ -1,25 +1,31 @@
-# Helia — Personal Health Assistant
+# Helia — Mobile Personal Health Assistant
 
-Unify your health apps into one weekly brief and an autonomous wellness companion.
+Installable mobile health app (PWA) that unifies your rings and phone health hubs.
 
-## What it does
-
-- **Connections** — Gabit Ring, Ultrahuman, Google Fit, Apple Health (priority), plus Fitbit, Garmin, MyFitnessPal, Strava, Withings, Oura
-- **Activity** — steps, active minutes, sedentary watch
-- **Nutrition** — food log, calories, macros
-- **Labs** — blood report markers with lifestyle flags
-- **Weekly summary** — wins, watchouts, next-week focus
-- **Assistant** — dietitian-style recommendations + autonomous nudges (hydrate when temperature is high, move when sedentary, protein reminders, and more)
-
-## Run locally
+## Run on your phone
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open the local URL on your phone (same Wi‑Fi), or use Chrome DevTools device mode. On iOS/Android, **Add to Home Screen** for an app-like fullscreen experience (`manifest.webmanifest`).
+
+## Core connections
+
+- Gabit Ring
+- Ultrahuman
+- Google Fit
+- Apple Health
+
+## Tabs
+
+- **Today** — overview + quick actions
+- **Move** — steps & sedentary watch
+- **Eat** — food & calories
+- **Week** — weekly summary
+- **More** — Assistant, Apps, Labs, Live nudges
 
 ## Important
 
-Helia is a **wellness assistant**, not a medical device. Lab insights are for education and lifestyle planning — confirm with a clinician before changing treatment.
+Helia is a **wellness assistant**, not a medical device.

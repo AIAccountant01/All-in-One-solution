@@ -4,7 +4,7 @@ import { useHealth } from "@/lib/store";
 import { formatRelative } from "@/lib/nudges";
 
 const priorityStyle = {
-  info: "border-[rgba(18,32,28,0.08)] bg-white/80",
+  info: "border-[rgba(18,32,28,0.08)] bg-white/90",
   action: "border-[rgba(217,119,6,0.25)] bg-[var(--accent-soft)]",
   urgent: "border-[rgba(180,35,24,0.25)] bg-[var(--danger-soft)]",
 } as const;
@@ -18,29 +18,42 @@ const typeLabel: Record<string, string> = {
   rest: "Rest",
 };
 
-export function NudgeRail() {
+export function NudgeSheet({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   const { activeNudges, dismissNudge, addWater, logMovement } = useHealth();
 
+  if (!open) return null;
+
   return (
-    <aside className="space-y-4 animate-rise-delay-2 xl:sticky xl:top-6 xl:self-start">
-      <div className="panel p-5">
-        <div className="flex items-center justify-between gap-2">
+    <div className="sheet-root" role="dialog" aria-modal="true" aria-label="Live nudges">
+      <button type="button" className="sheet-backdrop" aria-label="Close" onClick={onClose} />
+      <div className="sheet-panel animate-rise">
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-[rgba(18,32,28,0.15)]" />
+        <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--brand)]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--brand)]">
               Live nudges
             </p>
-            <h3 className="display text-2xl">Acting for you</h3>
+            <h2 className="display text-2xl">Acting for you</h2>
           </div>
-          <span className="animate-pulse-ring grid h-10 w-10 place-items-center rounded-full bg-[var(--brand-soft)] text-sm font-bold text-[var(--brand-deep)]">
-            {activeNudges.length}
-          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-[var(--line)] bg-white px-3 py-1.5 text-xs font-semibold"
+          >
+            Close
+          </button>
         </div>
 
-        <div className="mt-4 max-h-[70vh] space-y-3 overflow-auto scroll-thin pr-1">
+        <div className="max-h-[55vh] space-y-3 overflow-auto scroll-thin pr-1">
           {activeNudges.length === 0 && (
-            <p className="rounded-2xl bg-white/70 px-4 py-5 text-sm text-[var(--muted)]">
-              No urgent nudges right now. Helia keeps watching temperature, stillness, water, and
-              protein in the background.
+            <p className="rounded-2xl bg-white/80 px-4 py-5 text-sm text-[var(--muted)]">
+              No urgent nudges. Helia keeps watching temperature, stillness, and hydration.
             </p>
           )}
 
@@ -92,6 +105,6 @@ export function NudgeRail() {
           ))}
         </div>
       </div>
-    </aside>
+    </div>
   );
 }

@@ -5,7 +5,8 @@ export type Section =
   | "labs"
   | "weekly"
   | "connections"
-  | "assistant";
+  | "assistant"
+  | "more";
 
 export type IntegrationId =
   | "gabit"
