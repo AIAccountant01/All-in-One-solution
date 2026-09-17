@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f3f6f4;
+  --bg-deep: #e7efe9;
+  --ink: #12201c;
+  --ink-soft: #3d524a;
+  --muted: #6b7f76;
+  --line: rgba(18, 32, 28, 0.1);
+  --panel: rgba(255, 255, 255, 0.72);
+  --panel-solid: #ffffff;
+  --brand: #0f6b5c;
+  --brand-deep: #0a4a40;
+  --brand-soft: #d7efe8;
+  --accent: #d97706;
+  --accent-soft: #fff1d6;
+  --danger: #b42318;
+  --danger-soft: #fde8e6;
+  --ok: #127a4b;
+  --ok-soft: #ddf5e8;
+  --shadow: 0 18px 50px rgba(15, 50, 40, 0.08);
+  --radius: 22px;
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #c9ebe1 0%, transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, #ffe8c2 0%, transparent 45%),
+    radial-gradient(800px 500px at 80% 100%, #d7e6f5 0%, transparent 50%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  background-attachment: fixed;
+}
+
+h1,
+h2,
+h3,
+.display {
+  font-family: var(--font-display), Georgia, serif;
+  letter-spacing: -0.03em;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: var(--brand-soft);
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(15, 107, 92, 0.35);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(15, 107, 92, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(15, 107, 92, 0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-rise {
+  animation: rise-in 0.55s ease both;
+}
+
+.animate-rise-delay-1 {
+  animation: rise-in 0.55s ease 0.08s both;
+}
+
+.animate-rise-delay-2 {
+  animation: rise-in 0.55s ease 0.16s both;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2.4s ease-out infinite;
+}
+
+.brand-shimmer {
+  background: linear-gradient(110deg, var(--brand-deep), var(--brand), #1f9d88, var(--brand-deep));
+  background-size: 220% 220%;
+  animation: shimmer 8s ease infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.panel {
+  background: var(--panel);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.progress-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(18, 32, 28, 0.08);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--brand-deep), #1aa58c);
+  transition: width 0.6s ease;
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: rgba(18, 32, 28, 0.18);
+  border-radius: 999px;
+}
