@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Section } from "@/lib/types";
 import { useHealth } from "@/lib/store";
 import { TodayView } from "@/components/TodayView";
@@ -22,10 +22,32 @@ const NAV: { id: Section; label: string; hint: string }[] = [
   { id: "assistant", label: "Assistant", hint: "Diet & nudges" },
 ];
 
+const SECTION_IDS = new Set(NAV.map((n) => n.id));
+
+function sectionFromHash(): Section {
+  if (typeof window === "undefined") return "today";
+  const raw = window.location.hash.replace(/^#/, "") as Section;
+  return SECTION_IDS.has(raw) ? raw : "today";
+}
+
 export function AppShell() {
   const { state, hydrated, activeNudges } = useHealth();
-  const [section, setSection] = useState<Section>("today");
+  const [section, setSectionState] = useState<Section>("today");
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setSectionState(sectionFromHash());
+    const onHash = () => setSectionState(sectionFromHash());
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
+  const setSection = (next: Section) => {
+    setSectionState(next);
+    if (typeof window !== "undefined") {
+      window.location.hash = next;
+    }
+  };
 
   const connectedCount = useMemo(
     () => state.integrations.filter((i) => i.connected).length,
@@ -63,13 +85,10 @@ export function AppShell() {
               {NAV.map((item) => {
                 const active = section === item.id;
                 return (
-                  <button
+                  <a
                     key={item.id}
-                    type="button"
-                    onClick={() => {
-                      setSection(item.id);
-                      setMenuOpen(false);
-                    }}
+                    href={`#${item.id}`}
+                    onClick={() => setMenuOpen(false)}
                     className={`rounded-2xl px-3 py-3 text-left transition ${
                       active
                         ? "bg-[var(--brand)] text-white shadow-lg shadow-[rgba(15,107,92,0.25)]"
@@ -84,7 +103,7 @@ export function AppShell() {
                     >
                       {item.hint}
                     </div>
-                  </button>
+                  </a>
                 );
               })}
             </nav>

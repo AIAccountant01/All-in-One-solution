@@ -180,7 +180,7 @@ export function formatRelative(iso: string | null): string {
 }
 
 export function defaultFood(
-  profile: Profile
+  _profile: Profile
 ): Omit<FoodEntry, "id"> {
   return {
     date: todayKey(),
