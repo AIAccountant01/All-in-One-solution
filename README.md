@@ -1,25 +1,25 @@
-# Helia — Personal Health Assistant
+# Helia monorepo
 
-Unify your health apps into one weekly brief and an autonomous wellness companion.
+## Stop — read this first
 
-## What it does
+We run a **4-agent product loop** before treating the consumer app as V1:
 
-- **Connections** — Apple Health, Google Fit, Fitbit, Garmin, MyFitnessPal, Strava, Withings, Oura (demo sync toggles)
-- **Activity** — steps, active minutes, sedentary watch
-- **Nutrition** — food log, calories, macros
-- **Labs** — blood report markers with lifestyle flags
-- **Weekly summary** — wins, watchouts, next-week focus
-- **Assistant** — dietitian-style recommendations + autonomous nudges (hydrate when temperature is high, move when sedentary, protein reminders, and more)
+**User → Product Manager → Coder → QA → (repeat until all approve)**
 
-## Run locally
+See [`product-loop/README.md`](./product-loop/README.md).
+
+The mobile Helia UI in this repo is a **prototype**. App creation / V1 ship is authorized only when `product-loop/workspace/v1-status.json` has `"gate_open": true`.
+
+## Prototype (not V1-final)
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+## Product loop (authoritative process)
 
-## Important
-
-Helia is a **wellness assistant**, not a medical device. Lab insights are for education and lifestyle planning — confirm with a clinician before changing treatment.
+```bash
+export PATH="$HOME/.nvm/versions/node/v24.21.0/bin:$PATH"  # Node 24+
+cd product-loop && npm install && npm run dev
+```

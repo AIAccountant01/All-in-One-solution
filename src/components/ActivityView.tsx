@@ -20,7 +20,7 @@ export function ActivityView() {
           <div>
             <h3 className="display text-2xl">Step & movement trail</h3>
             <p className="text-sm text-[var(--muted)]">
-              Synced from Apple Health, Fitbit, and Oura when connected
+              Synced from Gabit, Ultrahuman, Google Fit, and Apple Health when connected
             </p>
           </div>
           <button
