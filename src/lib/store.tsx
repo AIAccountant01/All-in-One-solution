@@ -19,12 +19,24 @@ import type {
   Nudge,
   Profile,
 } from "./types";
-
-const STORAGE_KEY = "helia-health-v2";
+import {
+  isVaultConfigured,
+  isVaultUnlocked,
+  loadEncryptedState,
+  lockVault,
+  saveEncryptedState,
+  touchVaultActivity,
+  wipeVault,
+} from "./vault";
 
 type HealthContextValue = {
   state: HealthState;
   hydrated: boolean;
+  locked: boolean;
+  vaultConfigured: boolean;
+  completeUnlock: () => Promise<void>;
+  lockNow: () => void;
+  wipeAllData: () => void;
   toggleIntegration: (id: IntegrationId) => void;
   dismissNudge: (id: string) => void;
   addWater: (ml: number) => void;
@@ -55,19 +67,9 @@ function mergeIntegrations(saved: HealthState): HealthState {
   return { ...saved, integrations };
 }
 
-function loadState(): HealthState {
-  if (typeof window === "undefined") return createSeedState();
-  try {
-    const raw =
-      localStorage.getItem(STORAGE_KEY) ??
-      localStorage.getItem("helia-health-v1");
-    if (!raw) return createSeedState();
-    const parsed = JSON.parse(raw) as HealthState;
-    if (!parsed?.profile || !parsed?.days) return createSeedState();
-    return mergeIntegrations(parsed);
-  } catch {
-    return createSeedState();
-  }
+function normalizeState(parsed: HealthState | null): HealthState {
+  if (!parsed?.profile || !parsed?.days) return createSeedState();
+  return mergeIntegrations(parsed);
 }
 
 function uid(prefix: string) {
@@ -77,19 +79,60 @@ function uid(prefix: string) {
 export function HealthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<HealthState>(createSeedState);
   const [hydrated, setHydrated] = useState(false);
+  const [locked, setLocked] = useState(true);
+  const [vaultConfigured, setVaultConfigured] = useState(false);
 
   useEffect(() => {
-    setState(loadState());
-    setHydrated(true);
+    const configured = isVaultConfigured();
+    setVaultConfigured(configured);
+    if (configured && isVaultUnlocked()) {
+      void (async () => {
+        try {
+          const data = await loadEncryptedState<HealthState>();
+          setState(normalizeState(data));
+          setLocked(false);
+          setHydrated(true);
+        } catch {
+          lockVault();
+          setLocked(true);
+          setHydrated(false);
+        }
+      })();
+    }
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state, hydrated]);
+    const onLocked = () => {
+      setLocked(true);
+      setHydrated(false);
+      setState(createSeedState());
+    };
+    window.addEventListener("helia:vault-locked", onLocked);
+    return () => window.removeEventListener("helia:vault-locked", onLocked);
+  }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || locked) return;
+    const bump = () => touchVaultActivity();
+    window.addEventListener("pointerdown", bump);
+    window.addEventListener("keydown", bump);
+    window.addEventListener("touchstart", bump);
+    return () => {
+      window.removeEventListener("pointerdown", bump);
+      window.removeEventListener("keydown", bump);
+      window.removeEventListener("touchstart", bump);
+    };
+  }, [hydrated, locked]);
+
+  useEffect(() => {
+    if (!hydrated || locked || !isVaultUnlocked()) return;
+    void saveEncryptedState(state).catch(() => {
+      /* vault may have locked mid-write */
+    });
+  }, [state, hydrated, locked]);
+
+  useEffect(() => {
+    if (!hydrated || locked) return;
 
     const run = () => {
       setState((prev) => {
@@ -108,7 +151,31 @@ export function HealthProvider({ children }: { children: ReactNode }) {
     run();
     const id = window.setInterval(run, 20000);
     return () => window.clearInterval(id);
-  }, [hydrated]);
+  }, [hydrated, locked]);
+
+  const completeUnlock = useCallback(async () => {
+    const data = await loadEncryptedState<HealthState>();
+    setState(normalizeState(data));
+    setVaultConfigured(true);
+    setLocked(false);
+    setHydrated(true);
+  }, []);
+
+  const lockNow = useCallback(() => {
+    lockVault();
+    setLocked(true);
+    setHydrated(false);
+    setState(createSeedState());
+    window.dispatchEvent(new CustomEvent("helia:vault-locked"));
+  }, []);
+
+  const wipeAllData = useCallback(() => {
+    wipeVault();
+    setVaultConfigured(false);
+    setLocked(true);
+    setHydrated(false);
+    setState(createSeedState());
+  }, []);
 
   const updateToday = useCallback(
     (mutator: (day: HealthState["days"][number]) => HealthState["days"][number]) => {
@@ -254,7 +321,9 @@ export function HealthProvider({ children }: { children: ReactNode }) {
   const resetDemo = useCallback(() => {
     const seed = createSeedState();
     setState(seed);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
+    if (isVaultUnlocked()) {
+      void saveEncryptedState(seed);
+    }
   }, []);
 
   const activeNudges = useMemo(
@@ -266,6 +335,11 @@ export function HealthProvider({ children }: { children: ReactNode }) {
     () => ({
       state,
       hydrated,
+      locked,
+      vaultConfigured,
+      completeUnlock,
+      lockNow,
+      wipeAllData,
       toggleIntegration,
       dismissNudge,
       addWater,
@@ -279,6 +353,11 @@ export function HealthProvider({ children }: { children: ReactNode }) {
     [
       state,
       hydrated,
+      locked,
+      vaultConfigured,
+      completeUnlock,
+      lockNow,
+      wipeAllData,
       toggleIntegration,
       dismissNudge,
       addWater,

@@ -11,6 +11,7 @@ import { WeeklyView } from "@/components/WeeklyView";
 import { ConnectionsView } from "@/components/ConnectionsView";
 import { AssistantView } from "@/components/AssistantView";
 import { NudgeSheet } from "@/components/NudgeSheet";
+import { LockScreen } from "@/components/LockScreen";
 
 const TAB_BAR: { id: Section; label: string }[] = [
   { id: "today", label: "Today" },
@@ -95,7 +96,15 @@ function TabIcon({ id, active }: { id: Section; active: boolean }) {
 }
 
 export function AppShell() {
-  const { state, hydrated, activeNudges } = useHealth();
+  const {
+    state,
+    hydrated,
+    locked,
+    completeUnlock,
+    lockNow,
+    wipeAllData,
+    activeNudges,
+  } = useHealth();
   const [section, setSectionState] = useState<Section>("today");
   const [nudgesOpen, setNudgesOpen] = useState(false);
 
@@ -134,16 +143,13 @@ export function AppShell() {
         ? "more"
         : section;
 
-  if (!hydrated) {
+  if (locked || !hydrated) {
     return (
-      <div className="mobile-stage">
-        <div className="phone-shell grid place-items-center">
-          <div className="text-center animate-pulse-ring px-8">
-            <p className="display text-4xl brand-shimmer">Helia</p>
-            <p className="mt-2 text-sm text-[var(--muted)]">Opening your health app…</p>
-          </div>
-        </div>
-      </div>
+      <LockScreen
+        onUnlocked={() => {
+          void completeUnlock();
+        }}
+      />
     );
   }
 
@@ -219,6 +225,37 @@ export function AppShell() {
                     {activeNudges.length}
                   </span>
                 </button>
+
+                <div className="panel space-y-3 px-4 py-4">
+                  <div>
+                    <p className="font-semibold">Security</p>
+                    <p className="text-xs text-[var(--muted)]">
+                      PIN vault · AES-GCM on device · auto-lock 15 min
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={lockNow}
+                    className="w-full rounded-2xl border border-[var(--line)] bg-white/80 px-4 py-2.5 text-sm font-semibold"
+                  >
+                    Lock now
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          "Wipe all encrypted Helia data on this device? This cannot be undone."
+                        )
+                      ) {
+                        wipeAllData();
+                      }
+                    }}
+                    className="w-full rounded-2xl bg-[var(--danger-soft)] px-4 py-2.5 text-sm font-semibold text-[var(--danger)]"
+                  >
+                    Wipe vault
+                  </button>
+                </div>
               </div>
             )}
 
