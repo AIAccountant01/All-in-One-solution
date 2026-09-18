@@ -136,18 +136,25 @@ export async function setupVault(pin: string, lockMinutes = 15) {
   };
   localStorage.setItem(VAULT_META_KEY, JSON.stringify(meta));
 
-  // Migrate any legacy plaintext state into the vault
-  let initial = "{}";
+  // Migrate any legacy plaintext state into the vault (only remove after save succeeds)
+  let initial: unknown = null;
+  let legacyKey: string | null = null;
   for (const k of LEGACY_PLAIN_KEYS) {
     const legacy = localStorage.getItem(k);
     if (legacy) {
-      initial = legacy;
-      localStorage.removeItem(k);
+      try {
+        initial = JSON.parse(legacy);
+        legacyKey = k;
+      } catch {
+        initial = null;
+        legacyKey = null;
+      }
       break;
     }
   }
   sessionKey = key;
-  await saveEncryptedState(initial === "{}" ? null : JSON.parse(initial));
+  await saveEncryptedState(initial);
+  if (legacyKey) localStorage.removeItem(legacyKey);
   scheduleAutoLock(lockMinutes);
   return true;
 }
