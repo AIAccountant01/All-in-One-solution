@@ -1,25 +1,25 @@
 # Helia monorepo
 
-## Stop — read this first
+## V1 status: GATE OPEN
 
-We run a **4-agent product loop** before treating the consumer app as V1:
+All four product-loop roles approved Helia **Version 1** (`product-loop/workspace/v1-status.json` → `"gate_open": true`).
 
-**User → Product Manager → Coder → QA → (repeat until all approve)**
+Helia is a mobile personal health assistant (PWA) unifying Gabit, Ultrahuman, Google Fit, and Apple Health — with weekly summaries, dietitian-style guidance, and autonomous nudges.
 
-See [`product-loop/README.md`](./product-loop/README.md).
-
-The mobile Helia UI in this repo is a **prototype**. App creation / V1 ship is authorized only when `product-loop/workspace/v1-status.json` has `"gate_open": true`.
-
-## Prototype (not V1-final)
-
+### Run the app
 ```bash
-npm install
-npm run dev
+npm install && npm run dev
 ```
+Open on your phone or Chrome device mode → **Add to Home Screen** to install.
 
-## Product loop (authoritative process)
-
+### Product loop (for future iterations)
 ```bash
-export PATH="$HOME/.nvm/versions/node/v24.21.0/bin:$PATH"  # Node 24+
+export PATH="$HOME/.nvm/versions/node/v24.21.0/bin:$PATH"
 cd product-loop && npm install && npm run dev
 ```
+
+### P1 (next)
+- Live HealthKit / Health Connect / partner OAuth
+- Native App Store / Play Store wrappers
+
+Helia is a wellness assistant, not a medical device.
