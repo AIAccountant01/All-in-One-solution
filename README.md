@@ -7,11 +7,11 @@ All four product-loop roles approved Helia **Version 1** (`product-loop/workspac
 Helia is a mobile personal health assistant (PWA) unifying Gabit, Ultrahuman, Google Fit, and Apple Health — with weekly summaries, dietitian-style guidance, and autonomous nudges.
 
 ### Install / open
-**Public app:** https://project-vorok.vercel.app  
+**Public app:** https://helia-pwa.vercel.app  
 
 On phone: open the link → create a PIN → browser menu → **Add to Home Screen**.
 
-> Note: `all-in-one-solution.vercel.app` still serves an old Create Next App stub (404). Use the URL above until that production project is updated.
+> Note: `all-in-one-solution.vercel.app` still serves an old Create Next App stub. Use the URL above.
 
 ### Security (on-device vault)
 - First launch: create a PIN (4–8 digits)
