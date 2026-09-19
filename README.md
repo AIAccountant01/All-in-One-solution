@@ -1,25 +1,33 @@
 # Helia monorepo
 
-## Stop — read this first
+## V1 status: GATE OPEN
 
-We run a **4-agent product loop** before treating the consumer app as V1:
+All four product-loop roles approved Helia **Version 1** (`product-loop/workspace/v1-status.json` → `"gate_open": true`).
 
-**User → Product Manager → Coder → QA → (repeat until all approve)**
+Helia is a mobile personal health assistant (PWA) unifying Gabit, Ultrahuman, Google Fit, and Apple Health — with weekly summaries, dietitian-style guidance, and autonomous nudges.
 
-See [`product-loop/README.md`](./product-loop/README.md).
+### Install / open
+**Public app:** https://helia-pwa.vercel.app  
 
-The mobile Helia UI in this repo is a **prototype**. App creation / V1 ship is authorized only when `product-loop/workspace/v1-status.json` has `"gate_open": true`.
+On phone: open the link → create a PIN → browser menu → **Add to Home Screen**.
 
-## Prototype (not V1-final)
+> Note: `all-in-one-solution.vercel.app` still serves an old Create Next App stub. Use the URL above.
 
+### Security (on-device vault)
+- First launch: create a PIN (4–8 digits)
+- Health data is encrypted at rest with **PBKDF2 + AES-GCM** in localStorage
+- Auto-locks after **15 minutes** of inactivity; More → Lock now / Wipe vault
+- PIN and keys never leave the device (demo integrations stay client-only)
+- HTTP security headers: CSP, X-Frame-Options, nosniff, HSTS, Referrer-Policy
+
+### Product loop (for future iterations)
 ```bash
-npm install
-npm run dev
-```
-
-## Product loop (authoritative process)
-
-```bash
-export PATH="$HOME/.nvm/versions/node/v24.21.0/bin:$PATH"  # Node 24+
+export PATH="$HOME/.nvm/versions/node/v24.21.0/bin:$PATH"
 cd product-loop && npm install && npm run dev
 ```
+
+### P1 (next)
+- Live HealthKit / Health Connect / partner OAuth
+- Native App Store / Play Store wrappers
+
+Helia is a wellness assistant, not a medical device.

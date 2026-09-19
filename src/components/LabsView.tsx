@@ -17,9 +17,10 @@ export function LabsView() {
     <div className="space-y-5 animate-rise">
       <section className="panel p-6">
         <h3 className="display text-2xl">Blood reports</h3>
-        <p className="mt-1 text-sm text-[var(--muted)]">
+        <p className="mt-1 text-sm text-[var(--ink-soft)]">
           Upload-ready structure with demo panels. Helia flags out-of-range markers for lifestyle
-          planning — not diagnosis.
+          planning only — this is <strong>not medical advice or a diagnosis</strong>. Confirm with a
+          clinician before changing treatment.
         </p>
         <p className="mt-4 rounded-2xl bg-[var(--brand-soft)] px-4 py-3 text-sm text-[var(--brand-deep)]">
           {labTrendNote(state.reports)}
