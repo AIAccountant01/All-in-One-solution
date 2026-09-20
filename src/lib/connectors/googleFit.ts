@@ -5,13 +5,52 @@ import type {
   SyncResult,
 } from "./types";
 import { demoLiveSyncDays } from "./merge";
-import { setProviderTokens } from "./tokenStore";
+import { setProviderTokens, getProviderTokens } from "./tokenStore";
+import {
+  createPkcePair,
+  getGoogleClientId,
+  savePkceVerifier,
+  takePkceVerifier,
+} from "./googleConfig";
 
 const FITNESS_SCOPE =
   "https://www.googleapis.com/auth/fitness.activity.read https://www.googleapis.com/auth/fitness.body.read";
 
-function clientId(): string | undefined {
-  return process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim() || undefined;
+async function refreshAccessTokenIfNeeded(): Promise<string | null> {
+  const tokens = getProviderTokens("google_fit");
+  if (!tokens?.access_token) return null;
+  const expiresAt = Number(tokens.expires_at ?? 0);
+  if (expiresAt && Date.now() < expiresAt - 60_000) {
+    return tokens.access_token;
+  }
+  if (!tokens.refresh_token) return tokens.access_token;
+
+  const clientId = getGoogleClientId();
+  if (!clientId) return tokens.access_token;
+
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      refresh_token: tokens.refresh_token,
+      grant_type: "refresh_token",
+    }),
+  });
+  if (!res.ok) return tokens.access_token;
+  const data = (await res.json()) as {
+    access_token: string;
+    expires_in?: number;
+    token_type?: string;
+  };
+  setProviderTokens("google_fit", {
+    ...tokens,
+    access_token: data.access_token,
+    token_type: data.token_type ?? "Bearer",
+    expires_at: String(Date.now() + (data.expires_in ?? 3600) * 1000),
+    mode: "oauth",
+  });
+  return data.access_token;
 }
 
 async function fetchGoogleFitToday(accessToken: string): Promise<SyncResult> {
@@ -43,7 +82,9 @@ async function fetchGoogleFitToday(accessToken: string): Promise<SyncResult> {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Google Fit sync failed (${res.status}): ${text.slice(0, 180)}`);
+    throw new Error(
+      `Google Fit sync failed (${res.status}): ${text.slice(0, 180)}`
+    );
   }
 
   const data = (await res.json()) as {
@@ -95,35 +136,37 @@ export const googleFitConnector: HealthConnector = {
   id: "google_fit",
   authMode: "oauth",
   label: "Google Fit",
-  connectHint: clientId()
-    ? "Sign in with Google to read steps, calories, and active minutes."
-    : "Add NEXT_PUBLIC_GOOGLE_CLIENT_ID for live OAuth, or connect now for a live-shaped sync pipeline.",
+  connectHint:
+    "Sign in with Google (PKCE) to read steps, calories, and active minutes. Paste a Web client ID below if needed.",
 
-  async connect(ctx: ConnectorContext): Promise<ConnectResult> {
-    const id = clientId();
-    if (id) {
-      const redirectUri = `${window.location.origin}/oauth/google`;
-      const params = new URLSearchParams({
-        client_id: id,
-        redirect_uri: redirectUri,
-        response_type: "token",
-        scope: FITNESS_SCOPE,
-        include_granted_scopes: "true",
-        prompt: "consent",
-        state: "google_fit",
-      });
+  async connect(_ctx: ConnectorContext): Promise<ConnectResult> {
+    const id = getGoogleClientId();
+    if (!id) {
       return {
         connected: false,
-        redirectUrl: `https://accounts.google.com/o/oauth2/v2/auth?${params}`,
-        note: "Redirecting to Google…",
+        note: "Add your Google OAuth Web client ID first (Connections → Google setup), then Connect again.",
       };
     }
 
-    ctx.setTokens({ mode: "demo_live", connectedAt: new Date().toISOString() });
+    const { verifier, challenge } = await createPkcePair();
+    savePkceVerifier(verifier);
+    const redirectUri = `${window.location.origin}/oauth/google`;
+    const params = new URLSearchParams({
+      client_id: id,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      scope: FITNESS_SCOPE,
+      include_granted_scopes: "true",
+      prompt: "consent",
+      access_type: "offline",
+      state: "google_fit",
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+    });
     return {
-      connected: true,
-      accountLabel: "Demo live sync (no Google client ID)",
-      note: "Configured Google OAuth later for real Fit data. Sync still updates Today from the connector pipeline.",
+      connected: false,
+      redirectUrl: `https://accounts.google.com/o/oauth2/v2/auth?${params}`,
+      note: "Redirecting to Google…",
     };
   },
 
@@ -135,34 +178,85 @@ export const googleFitConnector: HealthConnector = {
     const tokens = ctx.getTokens();
     if (!tokens) throw new Error("Google Fit is not connected");
 
-    if (tokens.access_token) {
-      return fetchGoogleFitToday(tokens.access_token);
+    const access =
+      (await refreshAccessTokenIfNeeded()) ?? tokens.access_token ?? null;
+    if (access) {
+      return fetchGoogleFitToday(access);
     }
 
     return {
       source: "google_fit",
       syncedAt: new Date().toISOString(),
       days: demoLiveSyncDays("google_fit"),
-      note: "Demo live sync — set NEXT_PUBLIC_GOOGLE_CLIENT_ID for real Fit reads.",
+      note: "No Google access token — reconnect Google Fit after adding a client ID.",
     };
   },
 };
 
-/** Persist tokens returned in the OAuth hash fragment. */
-export function captureGoogleOAuthHash(): boolean {
+/** Handle both auth-code (?code=) and legacy hash token returns. */
+export async function completeGoogleOAuthReturn(): Promise<boolean> {
   if (typeof window === "undefined") return false;
+
   const hash = window.location.hash.replace(/^#/, "");
-  if (!hash.includes("access_token")) return false;
-  const params = new URLSearchParams(hash);
-  const access = params.get("access_token");
+  if (hash.includes("access_token")) {
+    const params = new URLSearchParams(hash);
+    const access = params.get("access_token");
+    const state = params.get("state");
+    if (access && state === "google_fit") {
+      setProviderTokens("google_fit", {
+        access_token: access,
+        token_type: params.get("token_type") ?? "Bearer",
+        expires_at: String(
+          Date.now() + Number(params.get("expires_in") ?? 3600) * 1000
+        ),
+        mode: "oauth",
+      });
+      window.history.replaceState(
+        {},
+        "",
+        window.location.pathname + window.location.search
+      );
+      return true;
+    }
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("code");
   const state = params.get("state");
-  if (!access || state !== "google_fit") return false;
+  const err = params.get("error");
+  if (err) return false;
+  if (!code || state !== "google_fit") return false;
+
+  const clientId = getGoogleClientId();
+  const verifier = takePkceVerifier();
+  if (!clientId || !verifier) return false;
+
+  const redirectUri = `${window.location.origin}/oauth/google`;
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      code,
+      code_verifier: verifier,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+    }),
+  });
+  if (!res.ok) return false;
+  const data = (await res.json()) as {
+    access_token: string;
+    refresh_token?: string;
+    expires_in?: number;
+    token_type?: string;
+  };
   setProviderTokens("google_fit", {
-    access_token: access,
-    token_type: params.get("token_type") ?? "Bearer",
-    expires_at: String(Date.now() + Number(params.get("expires_in") ?? 3600) * 1000),
+    access_token: data.access_token,
+    refresh_token: data.refresh_token ?? "",
+    token_type: data.token_type ?? "Bearer",
+    expires_at: String(Date.now() + (data.expires_in ?? 3600) * 1000),
     mode: "oauth",
   });
-  window.history.replaceState({}, "", window.location.pathname + window.location.search);
+  window.history.replaceState({}, "", window.location.pathname);
   return true;
 }

@@ -20,7 +20,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob:",
       "font-src 'self' data:",
-      "connect-src 'self' https://www.googleapis.com https://accounts.google.com",
+      "connect-src 'self' https://www.googleapis.com https://accounts.google.com https://oauth2.googleapis.com",
       "base-uri 'self'",
       "form-action 'self'",
       "frame-ancestors 'none'",

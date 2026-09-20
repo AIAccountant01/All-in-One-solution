@@ -1,10 +1,14 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useHealth } from "@/lib/store";
 import { formatRelative } from "@/lib/nudges";
 import { PRIMARY_INTEGRATION_IDS, type IntegrationId } from "@/lib/types";
 import { getConnector } from "@/lib/connectors";
+import {
+  getGoogleClientId,
+  setGoogleClientId,
+} from "@/lib/connectors/googleConfig";
 
 const categoryLabel = {
   activity: "Activity",
@@ -40,8 +44,17 @@ export function ConnectionsView() {
     resetDemo,
   } = useHealth();
   const [busyId, setBusyId] = useState<IntegrationId | null>(null);
+  const [syncingAll, setSyncingAll] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
+  const [clientIdDraft, setClientIdDraft] = useState("");
+  const [hasClientId, setHasClientId] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const id = getGoogleClientId() ?? "";
+    setClientIdDraft(id);
+    setHasClientId(Boolean(id));
+  }, []);
 
   const { primary, other } = useMemo(() => {
     const primarySet = new Set(PRIMARY_INTEGRATION_IDS);
@@ -96,6 +109,27 @@ export function ConnectionsView() {
     }
   }
 
+  async function onSyncAll() {
+    setSyncingAll(true);
+    setBanner(null);
+    const notes: string[] = [];
+    try {
+      for (const app of primary.filter((p) => p.connected)) {
+        try {
+          const note = await syncIntegration(app.id);
+          if (note) notes.push(`${app.name}: ${note}`);
+        } catch (err) {
+          notes.push(
+            `${app.name}: ${err instanceof Error ? err.message : "failed"}`
+          );
+        }
+      }
+      setBanner(notes.join(" · ") || "Nothing to sync — connect an app first");
+    } finally {
+      setSyncingAll(false);
+    }
+  }
+
   async function onImportFile(file: File | undefined) {
     if (!file) return;
     setBusyId("apple_health");
@@ -111,20 +145,77 @@ export function ConnectionsView() {
     }
   }
 
+  function saveClientId() {
+    const next = clientIdDraft.trim();
+    setGoogleClientId(next || null);
+    setHasClientId(Boolean(next));
+    setBanner(
+      next
+        ? "Google client ID saved on this device. Tap Connect on Google Fit."
+        : "Google client ID cleared."
+    );
+  }
+
   return (
     <div className="space-y-5 animate-rise">
       <section className="panel p-6">
         <h3 className="display text-2xl">Connect your apps</h3>
         <p className="mt-1 max-w-2xl text-sm text-[var(--ink-soft)]">
-          Start with <strong>Google Fit</strong> or <strong>Apple Health</strong>, then link{" "}
-          <strong>Gabit</strong> and <strong>Ultrahuman</strong> through those hubs.{" "}
+          Start with <strong>Google Fit</strong> or <strong>Apple Health</strong>, then
+          link <strong>Gabit</strong> and <strong>Ultrahuman</strong> through those hubs.{" "}
           {primaryConnected}/4 priority sources connected.
         </p>
         <ol className="mt-3 list-decimal space-y-1 pl-5 text-xs text-[var(--muted)]">
-          <li>Connect Google Fit (OAuth) and/or import an Apple Health export</li>
-          <li>Connect Gabit & Ultrahuman so ring vitals flow via the hubs</li>
-          <li>Tap Sync to refresh Today&apos;s steps, sleep, and vitals</li>
+          <li>Paste a Google OAuth Web client ID (below), then Connect Google Fit</li>
+          <li>Or import an Apple Health export zip/xml</li>
+          <li>Connect Gabit & Ultrahuman once a hub is linked</li>
+          <li>Tap Sync / Sync all to refresh Today</li>
         </ol>
+        <button
+          type="button"
+          disabled={syncingAll || primaryConnected === 0}
+          onClick={() => void onSyncAll()}
+          className="mt-4 rounded-2xl bg-[var(--brand)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          {syncingAll ? "Syncing all…" : "Sync all connected"}
+        </button>
+      </section>
+
+      <section className="panel space-y-3 p-5">
+        <div>
+          <h3 className="font-semibold">Google Fit setup</h3>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            Google Cloud → enable <strong>Fitness API</strong> → Credentials → OAuth client
+            (Web). Authorized redirect URI:
+          </p>
+          <code className="mt-2 block break-all rounded-xl bg-[rgba(18,32,28,0.05)] px-3 py-2 text-[11px]">
+            {typeof window !== "undefined"
+              ? `${window.location.origin}/oauth/google`
+              : "https://helia-pwa.vercel.app/oauth/google"}
+          </code>
+        </div>
+        <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+          OAuth Web client ID
+          <input
+            type="text"
+            value={clientIdDraft}
+            onChange={(e) => setClientIdDraft(e.target.value)}
+            placeholder="123456789-abc.apps.googleusercontent.com"
+            className="mt-2 w-full rounded-2xl border border-[var(--line)] bg-white/90 px-4 py-3 text-sm font-normal normal-case tracking-normal"
+          />
+        </label>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={saveClientId}
+            className="rounded-2xl bg-[var(--brand)] px-4 py-2.5 text-sm font-semibold text-white"
+          >
+            Save client ID
+          </button>
+          <span className="self-center text-xs text-[var(--muted)]">
+            {hasClientId ? "Ready for real Google sign-in" : "Not configured yet"}
+          </span>
+        </div>
       </section>
 
       {banner && (
@@ -139,6 +230,8 @@ export function ConnectionsView() {
           const busy = busyId === app.id;
           const isRing = app.id === "gabit" || app.id === "ultrahuman";
           const ringBlocked = isRing && !hubsReady && !app.connected;
+          const googleBlocked =
+            app.id === "google_fit" && !hasClientId && !app.connected;
 
           return (
             <div
@@ -190,11 +283,17 @@ export function ConnectionsView() {
                 {!app.connected ? (
                   <button
                     type="button"
-                    disabled={busy || ringBlocked}
+                    disabled={busy || ringBlocked || googleBlocked}
                     onClick={() => onConnect(app.id)}
                     className="rounded-2xl bg-[var(--brand)] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
                   >
-                    {busy ? "Working…" : ringBlocked ? "Connect a hub first" : "Connect"}
+                    {busy
+                      ? "Working…"
+                      : googleBlocked
+                        ? "Add client ID first"
+                        : ringBlocked
+                          ? "Connect a hub first"
+                          : "Connect"}
                   </button>
                 ) : (
                   <>

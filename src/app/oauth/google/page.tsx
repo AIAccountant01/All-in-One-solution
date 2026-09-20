@@ -1,23 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { captureGoogleOAuthHash } from "@/lib/connectors/googleFit";
+import { completeGoogleOAuthReturn } from "@/lib/connectors/googleFit";
 
 export default function GoogleOAuthReturnPage() {
   const [message, setMessage] = useState("Finishing Google Fit connection…");
 
   useEffect(() => {
-    const ok = captureGoogleOAuthHash();
-    if (ok) {
-      setMessage("Google Fit connected. Returning to Helia…");
-      window.location.replace("/#connections");
-      return;
-    }
-    setMessage("Could not complete Google sign-in. Returning…");
-    const t = window.setTimeout(() => {
-      window.location.replace("/#connections");
-    }, 1600);
-    return () => window.clearTimeout(t);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const ok = await completeGoogleOAuthReturn();
+        if (cancelled) return;
+        if (ok) {
+          setMessage("Google Fit connected. Returning to Helia…");
+          window.location.replace("/#connections");
+          return;
+        }
+        setMessage("Could not complete Google sign-in. Returning…");
+      } catch {
+        if (!cancelled) setMessage("Google sign-in failed. Returning…");
+      }
+      window.setTimeout(() => {
+        window.location.replace("/#connections");
+      }, 1800);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (

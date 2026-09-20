@@ -21,10 +21,13 @@ On phone: open the link → create a PIN → browser menu → **Add to Home Scre
 - HTTP security headers: CSP, X-Frame-Options, nosniff, HSTS, Referrer-Policy
 
 ### Live connections (P1)
-1. **Google Fit** — Connect runs Google OAuth when `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is set (redirect URI: `/oauth/google`). Without it, Connect still uses the live sync pipeline in demo mode.
+1. **Google Fit** — In Apps → **Google Fit setup**, paste an OAuth **Web client ID**, then Connect (PKCE). Redirect URI: `https://helia-pwa.vercel.app/oauth/google`. Enable the Fitness API in Google Cloud.
 2. **Apple Health** — Connect + **Import export** (Health app → Export All Health Data `.zip` / `export.xml`).
 3. **Gabit / Ultrahuman** — Connect after a hub is linked; sync flows through Apple Health / Google Fit until partner OAuth exists.
-4. Tap **Sync now** on any connected priority app to refresh Today.
+4. Tap **Sync now** or **Sync all connected** to refresh Today.
+
+Optional env (also works via the in-app client ID field):
+`NEXT_PUBLIC_GOOGLE_CLIENT_ID=....apps.googleusercontent.com`
 
 ### Product loop (for future iterations)
 ```bash
