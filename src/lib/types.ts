@@ -29,6 +29,10 @@ export type Integration = {
   lastSync: string | null;
   primary?: boolean;
   metrics?: string[];
+  /** How the live connector authenticated */
+  accountLabel?: string | null;
+  /** Last connector note (oauth / import / hub) */
+  syncNote?: string | null;
 };
 
 /** Core sources Helia is built around for you */

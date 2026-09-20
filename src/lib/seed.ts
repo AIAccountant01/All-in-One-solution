@@ -24,8 +24,8 @@ const INTEGRATIONS: Integration[] = [
     category: "ring",
     description:
       "Smart ring for recovery, sleep, HR/HRV, skin temperature, steps, stress, and nutrition via the Gabit app.",
-    connected: true,
-    lastSync: hoursAgo(0.2),
+    connected: false,
+    lastSync: null,
     primary: true,
     metrics: ["Sleep", "HRV", "Temp", "Steps", "Recovery", "Stress"],
   },
@@ -35,8 +35,8 @@ const INTEGRATIONS: Integration[] = [
     category: "ring",
     description:
       "Ring AIR recovery index, sleep stages, temperature, HRV, movement — plus CGM when you use Ultrahuman M1.",
-    connected: true,
-    lastSync: hoursAgo(0.4),
+    connected: false,
+    lastSync: null,
     primary: true,
     metrics: ["Recovery", "Sleep", "HRV", "Temp", "Glucose"],
   },
@@ -46,8 +46,8 @@ const INTEGRATIONS: Integration[] = [
     category: "activity",
     description:
       "Android activity hub — steps, workouts, and Heart Points. Bridges Health Connect sources on Android.",
-    connected: true,
-    lastSync: hoursAgo(0.6),
+    connected: false,
+    lastSync: null,
     primary: true,
     metrics: ["Steps", "Workouts", "Calories"],
   },
@@ -57,8 +57,8 @@ const INTEGRATIONS: Integration[] = [
     category: "activity",
     description:
       "iPhone HealthKit hub — pulls Watch, Gabit, Ultrahuman, and other apps into one permissioned stream.",
-    connected: true,
-    lastSync: hoursAgo(0.3),
+    connected: false,
+    lastSync: null,
     primary: true,
     metrics: ["Steps", "Heart", "Sleep", "Workouts"],
   },
