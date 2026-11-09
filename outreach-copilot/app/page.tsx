@@ -131,6 +131,11 @@ function writeKeys(next: Record<string, string>) {
   localStorage.removeItem("keys");
 }
 
+function writePass(value: string) {
+  sessionStorage.setItem("pass", value);
+  localStorage.removeItem("pass");
+}
+
 function keyHeaders() {
   const stored = readKeys();
   // Only forward non-empty overrides; server env keys are preferred when absent.
@@ -229,8 +234,18 @@ export default function Page() {
       }
       setProfile(p);
     }
-    const passSaved = ls("pass");
-    if (typeof passSaved === "string") setPass(passSaved);
+    try {
+      const sessionPass = sessionStorage.getItem("pass");
+      const legacyPass = ls("pass");
+      if (typeof sessionPass === "string") setPass(sessionPass);
+      else if (typeof legacyPass === "string") {
+        setPass(legacyPass);
+        sessionStorage.setItem("pass", legacyPass);
+        localStorage.removeItem("pass");
+      }
+    } catch {
+      /* ignore */
+    }
     const h = ls("history");
     if (Array.isArray(h)) setHistory(h);
     const cur = ls("current") as RunState | null;
@@ -249,13 +264,25 @@ export default function Page() {
         method: "POST",
         headers: {
           "content-type": "application/json",
+          accept: "application/json",
           "x-passcode": pass,
           ...keyHeaders(),
         },
         body: JSON.stringify({ ...(body as object), profile }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Request failed");
+      const raw = await res.text();
+      let data: { error?: string } & Record<string, unknown> = {};
+      try {
+        data = raw ? (JSON.parse(raw) as typeof data) : {};
+      } catch {
+        const looksHtml = /^\s*<!doctype|^\s*<html/i.test(raw);
+        throw new Error(
+          looksHtml
+            ? `Server returned a web page instead of data (HTTP ${res.status}). Try again in a moment — if it keeps happening, refresh and re-open the app.`
+            : `Bad server response (HTTP ${res.status}): ${raw.slice(0, 120) || "empty"}`,
+        );
+      }
+      if (!res.ok) throw new Error((data.error as string) || `Request failed (${res.status})`);
       return data as T;
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Request failed");
@@ -462,7 +489,7 @@ ${Object.entries(n.items)
           pass={pass}
           setPass={(p) => {
             setPass(p);
-            ls("pass", p);
+            writePass(p);
           }}
         />
       )}
@@ -991,7 +1018,7 @@ ${Object.entries(n.items)
                     placeholder="Enter passcode"
                     onChange={(e) => {
                       setPass(e.target.value);
-                      ls("pass", e.target.value);
+                      writePass(e.target.value);
                     }}
                   />
                   <button className="btn ghost" onClick={() => setErr("")}>

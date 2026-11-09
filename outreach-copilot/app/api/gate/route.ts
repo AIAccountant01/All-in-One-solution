@@ -1,11 +1,14 @@
 import { requireApiAccess } from "@/lib/auth";
 import { scoreCopy } from "@/lib/jev";
+import { limitWrite } from "@/lib/rate-limit";
 import type { Profile } from "@/lib/types";
 
 export async function POST(req: Request) {
-  const auth = await requireApiAccess(req);
-  if (auth instanceof Response) return auth;
   try {
+    const auth = await requireApiAccess(req);
+    if (auth instanceof Response) return auth;
+    const limited = await limitWrite(auth.ownerId, "gate");
+    if (limited) return limited;
     const body = (await req.json()) as {
       body?: string;
       profile?: Profile;
