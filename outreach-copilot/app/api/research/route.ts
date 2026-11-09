@@ -10,7 +10,7 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   const auth = await requireApiAccess(req);
   if (auth instanceof Response) return auth;
-  const limited = limitLlm(auth.ownerId, "research");
+  const limited = await limitLlm(auth.ownerId, "research");
   if (limited) return limited;
   try {
     const body = (await req.json()) as {
@@ -66,7 +66,9 @@ Return JSON matching the schema. signals[].url must be one of the source URLs.`,
 
     // Keep only signals whose URL was in live set
     const liveUrls = new Set(live.map((l) => l.url));
-    const signals = result.signals.filter((s) => liveUrls.has(s.url) || /^https?:\/\//.test(s.url));
+    const signals = (result.signals || []).filter(
+      (s) => liveUrls.has(s.url) || /^https?:\/\//.test(s.url),
+    );
     const verified = [];
     let extraDropped = 0;
     for (const s of signals) {
@@ -74,8 +76,26 @@ Return JSON matching the schema. signals[].url must be one of the source URLs.`,
       else extraDropped++;
     }
 
+    const name = (result.name || "").trim() || company;
+    const summary =
+      (result.summary || "").trim() ||
+      (live.length
+        ? `Found ${live.length} live source(s) for ${company}, but the model returned a thin summary.`
+        : `No live web sources loaded for ${company}.`);
+
+    if (!verified.length && !live.length) {
+      return Response.json(
+        {
+          error: `No live sources found for "${company}". Check the name spelling, or try again.`,
+        },
+        { status: 422 },
+      );
+    }
+
     return Response.json({
       ...result,
+      name,
+      summary,
       signals: verified,
       dropped: dropped + extraDropped,
       models: meta.models,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type {
   Person,
   PocResult,
@@ -109,18 +109,69 @@ function ls(key: string, value?: unknown) {
 }
 
 function readKeys(): Record<string, string> {
+  if (typeof window === "undefined") return {};
   try {
-    return JSON.parse(localStorage.getItem("keys") || "{}") || {};
+    // Prefer sessionStorage so keys do not survive browser restarts.
+    const session = sessionStorage.getItem("keys");
+    if (session) return JSON.parse(session) || {};
+    const legacy = localStorage.getItem("keys");
+    if (legacy) {
+      sessionStorage.setItem("keys", legacy);
+      localStorage.removeItem("keys");
+      return JSON.parse(legacy) || {};
+    }
+    return {};
   } catch {
     return {};
   }
 }
 
+function writeKeys(next: Record<string, string>) {
+  sessionStorage.setItem("keys", JSON.stringify(next));
+  localStorage.removeItem("keys");
+}
+
 function keyHeaders() {
   const stored = readKeys();
+  // Only forward non-empty overrides; server env keys are preferred when absent.
   return Object.fromEntries(
-    KEY_DEFS.filter((k) => stored[k.id]).map((k) => [k.header, stored[k.id]]),
+    KEY_DEFS.filter((k) => stored[k.id]?.trim()).map((k) => [k.header, stored[k.id]!.trim()]),
   );
+}
+
+/** Only allow http(s) links in the UI — blocks javascript:/data: etc. */
+function safeHref(raw?: string | null): string | undefined {
+  if (!raw) return undefined;
+  try {
+    const u = new URL(raw);
+    if (u.protocol === "http:" || u.protocol === "https:") return u.toString();
+  } catch {
+    /* ignore */
+  }
+  return undefined;
+}
+
+function ExtLink({
+  href,
+  children,
+}: {
+  href?: string | null;
+  children: ReactNode;
+}) {
+  const safe = safeHref(href);
+  if (!safe) return <span className="mute">{children}</span>;
+  return (
+    <a href={safe} target="_blank" rel="noreferrer noopener">
+      {children}
+    </a>
+  );
+}
+
+function shortModel(id: string) {
+  // openrouter:nemotron-3-nano-omni-…:free → nemotron…:free
+  const leaf = id.includes(":") ? id.split(":").slice(1).join(":") : id;
+  const base = leaf.split("/").pop() || leaf;
+  return base.length > 28 ? `${base.slice(0, 18)}…${base.slice(-6)}` : base;
 }
 
 function Byline({ r }: { r?: { models?: string[]; claude_down?: string | null } | null }) {
@@ -133,9 +184,10 @@ function Byline({ r }: { r?: { models?: string[]; claude_down?: string | null } 
         : r.claude_down
           ? "Claude down"
           : "";
+  const label = r.models.map(shortModel).join(" + ");
   return (
-    <span className="pill" title={note} style={{ fontSize: 11 }}>
-      by {r.models.join(" + ")}
+    <span className="pill" title={`${r.models.join(" + ")}${note ? ` · ${note}` : ""}`} style={{ fontSize: 11 }}>
+      by {label}
       {note ? ` · ${note}` : ""}
     </span>
   );
@@ -215,7 +267,21 @@ export default function Page() {
 
   const doResearch = async () => {
     const data = await api<Research>("research", { company: run.company }, "Researching what's moving…");
-    if (data) setRun({ ...run, step: 2, research: data });
+    if (!data) return;
+    if (!data.name?.trim() && !data.summary?.trim() && !(data.signals?.length > 0)) {
+      setErr("Research came back empty. Try again, or check Profile → API keys / server secrets.");
+      return;
+    }
+    setRun({
+      ...run,
+      step: 2,
+      research: {
+        ...data,
+        name: data.name?.trim() || run.company || "Company",
+        summary: data.summary?.trim() || "No usable summary from live sources yet.",
+        signals: data.signals || [],
+      },
+    });
   };
 
   const doTheses = async (ownText?: string) => {
@@ -469,14 +535,21 @@ ${Object.entries(n.items)
 
           {run.step >= 2 && run.research && (
             <div className="card">
-              <div className="row">
-                <h3 className="grow">{run.research.name}</h3>
+              <div className="row" style={{ alignItems: "flex-start" }}>
+                <h3 className="grow" style={{ marginRight: 8 }}>
+                  {run.research.name || run.company || "Company"}
+                </h3>
                 <Byline r={run.research} />
                 <button className="btn ghost" onClick={reset}>
                   New company
                 </button>
               </div>
-              <p>{run.research.summary}</p>
+              <p>{run.research.summary || "No summary yet."}</p>
+              {!run.research.signals?.length && (
+                <p className="err">
+                  No live signals with loading sources. Try Research again, or add your own read.
+                </p>
+              )}
               {!!run.research.fit_flags?.filter(Boolean).length && (
                 <p className="err">Fit check: {run.research.fit_flags.join(" · ")}</p>
               )}
@@ -496,10 +569,10 @@ ${Object.entries(n.items)
                 <p className="mute">
                   Open roles (undated or older than 60 days, not used as a hook):{" "}
                   {run.research.open_roles.map((e, i) => (
-                    <a key={i} href={e.url} target="_blank" rel="noreferrer">
+                    <ExtLink key={i} href={e.url}>
                       {e.fact.replace("Open role: ", "")}
                       {i < run.research!.open_roles!.length - 1 ? " · " : ""}
-                    </a>
+                    </ExtLink>
                   ))}
                 </p>
               )}
@@ -516,9 +589,7 @@ ${Object.entries(n.items)
                     )}
                   </div>
                   {e.fact}{" "}
-                  <a href={e.url} target="_blank" rel="noreferrer">
-                    source
-                  </a>
+                  <ExtLink href={e.url}>source</ExtLink>
                 </div>
               ))}
               {run.research.dropped > 0 && (
@@ -648,15 +719,11 @@ ${Object.entries(n.items)
                     <b>{e.name}</b> — {e.title}
                     {run.pocs!.recommend === i && <span className="pill PASS">recommended</span>}
                     <div className="mute">
-                      <a href={e.source_url} target="_blank" rel="noreferrer">
-                        source
-                      </a>
+                      <ExtLink href={e.source_url}>source</ExtLink>
                       {e.linkedin_url && (
                         <>
                           {" · "}
-                          <a href={e.linkedin_url} target="_blank" rel="noreferrer">
-                            LinkedIn
-                          </a>
+                          <ExtLink href={e.linkedin_url}>LinkedIn</ExtLink>
                         </>
                       )}
                       {e.email && <> · {e.email} (shown here)</>}
@@ -961,7 +1028,7 @@ function ProfileTab({
 
   const saveKeys = (next: Record<string, string>) => {
     setKeys(next);
-    localStorage.setItem("keys", JSON.stringify(next));
+    writeKeys(next);
   };
 
   return (
@@ -1004,10 +1071,9 @@ function ProfileTab({
       <div id="keys" style={{ marginTop: 18 }}>
         <h3>API keys</h3>
         <p className="mute">
-          Saved in this browser only, never on the server. Sent with each request; when empty, the
-          server&apos;s own key is used. If Claude is out of credit, Kimi takes over (research uses
-          Kimi&apos;s web search), the Claude reviewer is skipped, and results say which model wrote
-          them.
+          Optional overrides for this browser tab only (sessionStorage — cleared when the tab
+          closes). Prefer server / published secrets when set; leave these empty to use them. Keys
+          are only sent as request headers when you paste an override.
         </p>
         {KEY_DEFS.map((e) => {
           const saved = keys[e.id];
@@ -1261,6 +1327,7 @@ function ApprovePanel({
           linkedin: ["linkedin1", "linkedin2", "linkedin3"]
             .map((k) => run.seq!.items[k]?.text)
             .filter(Boolean),
+          send_now: !!m.sendNow,
         }),
       });
       const data = await res.json();

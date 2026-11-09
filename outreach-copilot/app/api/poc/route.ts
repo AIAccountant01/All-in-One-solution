@@ -10,7 +10,7 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   const auth = await requireApiAccess(req);
   if (auth instanceof Response) return auth;
-  const limited = limitLlm(auth.ownerId, "poc");
+  const limited = await limitLlm(auth.ownerId, "poc");
   if (limited) return limited;
   try {
     const body = (await req.json()) as {

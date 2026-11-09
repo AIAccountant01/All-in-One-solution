@@ -5,7 +5,7 @@ import { testKey } from "@/lib/keys";
 export async function POST(req: Request) {
   const auth = await requireApiAccess(req);
   if (auth instanceof Response) return auth;
-  const limited = limitLlm(auth.ownerId, "keys-test");
+  const limited = await limitLlm(auth.ownerId, "keys-test");
   if (limited) return limited;
   try {
     const body = (await req.json()) as {

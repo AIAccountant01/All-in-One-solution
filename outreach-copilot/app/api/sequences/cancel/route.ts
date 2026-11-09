@@ -5,7 +5,7 @@ import { limitWrite } from "@/lib/rate-limit";
 export async function POST(req: Request) {
   const auth = await requireApiAccess(req);
   if (auth instanceof Response) return auth;
-  const limited = limitWrite(auth.ownerId, "sequences-cancel");
+  const limited = await limitWrite(auth.ownerId, "sequences-cancel");
   if (limited) return limited;
   try {
     const body = (await req.json()) as { id?: string };

@@ -1,6 +1,6 @@
 import { requireApiAccess } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import { limitWrite } from "@/lib/rate-limit";
+import { limitEmail, limitWrite } from "@/lib/rate-limit";
 import { randomUUID } from "node:crypto";
 
 export async function GET(req: Request) {
@@ -56,7 +56,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const auth = await requireApiAccess(req);
   if (auth instanceof Response) return auth;
-  const limited = limitWrite(auth.ownerId, "sequences");
+  const limited = await limitWrite(auth.ownerId, "sequences");
   if (limited) return limited;
   try {
     const body = (await req.json()) as {
@@ -72,6 +72,8 @@ export async function POST(req: Request) {
       }[];
       linkedin?: string[];
       test?: boolean;
+      /** Explicit opt-in — never auto-send just because a step is due soon. */
+      send_now?: boolean;
     };
     if (!body.company || !body.to || !body.subject || !body.steps?.length) {
       return Response.json({ error: "incomplete sequence" }, { status: 400 });
@@ -102,13 +104,16 @@ export async function POST(req: Request) {
       ],
     );
 
+    // Only send immediately when the client explicitly opts in (Approve → Send now).
+    // Never auto-fire Resend just because a step timestamp is near — that burns quota.
     const resend = process.env.RESEND_API_KEY?.trim();
     const from = process.env.FROM_EMAIL?.trim() || "raghav.r@onplusone.in";
-    if (resend && steps[0]) {
-      const first = steps[0];
-      const when = new Date(first.send_at_iso).getTime();
-      if (when <= Date.now() + 60_000) {
-        await fetch("https://api.resend.com/emails", {
+    let emailed = false;
+    if (body.send_now && resend && steps[0] && !body.test) {
+      const emailLimited = await limitEmail(auth.ownerId);
+      if (!emailLimited) {
+        const first = steps[0];
+        const sent = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             authorization: `Bearer ${resend}`,
@@ -121,6 +126,14 @@ export async function POST(req: Request) {
             text: first.body,
           }),
         }).catch(() => null);
+        emailed = !!sent?.ok;
+        if (emailed) {
+          steps[0] = { ...first, sent: true };
+          await sql(
+            `UPDATE sequences SET steps = $1, updated_at = NOW() WHERE id = $2 AND owner_id = $3`,
+            [JSON.stringify(steps), id, auth.ownerId],
+          );
+        }
       }
     }
 
@@ -133,6 +146,7 @@ export async function POST(req: Request) {
           steps,
           linkedin,
           status: "active",
+          emailed,
         },
       },
       { headers: { "cache-control": "private, no-store" } },
