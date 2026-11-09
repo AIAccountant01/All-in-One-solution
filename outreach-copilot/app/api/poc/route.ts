@@ -25,7 +25,9 @@ export async function POST(req: Request) {
     );
     const { live } = await filterLiveSources(hits.slice(0, 8));
 
-    const { result, meta } = await withModels(keys, async ({ generateObject, model }) => {
+    const { result, meta } = await withModels(
+      keys,
+      async ({ generateObject, model }) => {
       const { object } = await generateObject({
         model,
         schema: peopleSchema,
@@ -39,7 +41,9 @@ SOURCES:
 ${live.map((h, i) => `[${i}] ${h.title}\n${h.url}\n${h.snippet}`).join("\n\n") || "(none)"}`,
       });
       return object;
-    });
+    },
+      { purpose: "decision" },
+    );
 
     const people = [];
     for (const p of result.people) {

@@ -9,6 +9,45 @@ export type ModelMeta = {
   claude_down: string | null;
 };
 
+/** Free OpenRouter models for research / theses / draft (thinking). */
+const DEFAULT_THINKING_MODELS = [
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  "google/gemma-4-31b-it:free",
+  "recursive/flint-v1.0:free",
+  "openrouter/free",
+];
+
+/** Free OpenRouter models for decision-maker checks / POC verification. */
+const DEFAULT_DECISION_MODELS = [
+  "google/gemma-4-31b-it:free",
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  "openrouter/free",
+];
+
+const PAID_OPENROUTER_FALLBACK = "moonshotai/kimi-k2.5";
+
+function splitModels(raw: string | undefined, fallback: string[]): string[] {
+  const fromEnv = (raw || "")
+    .split(/[,|\s]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return fromEnv.length ? fromEnv : fallback;
+}
+
+export function thinkingModels(): string[] {
+  return splitModels(
+    process.env.OPENROUTER_THINKING_MODELS || process.env.OPENROUTER_THINKING_MODEL,
+    DEFAULT_THINKING_MODELS,
+  );
+}
+
+export function decisionModels(): string[] {
+  return splitModels(
+    process.env.OPENROUTER_DECISION_MODELS || process.env.OPENROUTER_DECISION_MODEL,
+    DEFAULT_DECISION_MODELS,
+  );
+}
+
 function anthropicModel(key: string, id = "claude-sonnet-4-5") {
   return createAnthropic({ apiKey: key })(id);
 }
@@ -29,6 +68,33 @@ function openrouterModel(key: string, id: string) {
   })(id);
 }
 
+async function runOpenRouterCascade<T>(
+  key: string,
+  ids: string[],
+  run: (ctx: {
+    generate: typeof generateText;
+    generateObject: typeof generateObject;
+    model: ReturnType<typeof openrouterModel>;
+    label: string;
+  }) => Promise<T>,
+): Promise<{ result: T; label: string }> {
+  let last: unknown;
+  for (const id of ids) {
+    try {
+      const result = await run({
+        generate: generateText,
+        generateObject,
+        model: openrouterModel(key, id),
+        label: `openrouter:${id.split("/").pop() || id}`,
+      });
+      return { result, label: `openrouter:${id.split("/").pop() || id}` };
+    } catch (e) {
+      last = e;
+    }
+  }
+  throw last instanceof Error ? last : new Error(String(last || "OpenRouter models failed"));
+}
+
 export async function withModels<T>(
   keys: KeysFromHeaders,
   run: (ctx: {
@@ -37,9 +103,12 @@ export async function withModels<T>(
     model: ReturnType<typeof anthropicModel>;
     label: string;
   }) => Promise<T>,
+  opts?: { purpose?: "thinking" | "decision" },
 ): Promise<{ result: T; meta: ModelMeta }> {
   const models: string[] = [];
   let claude_down: string | null = null;
+  const purpose = opts?.purpose || "thinking";
+  const freeIds = purpose === "decision" ? decisionModels() : thinkingModels();
 
   if (keys.anthropic) {
     try {
@@ -63,6 +132,17 @@ export async function withModels<T>(
     claude_down = "missing";
   }
 
+  // Prefer free OpenRouter models the user enabled (decision / thinking).
+  if (keys.openrouter) {
+    try {
+      const { result, label } = await runOpenRouterCascade(keys.openrouter, freeIds, run);
+      models.push(label);
+      return { result, meta: { models, claude_down } };
+    } catch {
+      // Fall through to Moonshot / paid OpenRouter.
+    }
+  }
+
   if (keys.moonshot) {
     try {
       const result = await run({
@@ -74,24 +154,22 @@ export async function withModels<T>(
       models.push("kimi");
       return { result, meta: { models, claude_down } };
     } catch (e) {
-      // Fall through to OpenRouter (deprecated/unavailable Kimi model ids, etc.)
       if (!keys.openrouter) throw e;
     }
   }
 
   if (keys.openrouter) {
-    const result = await run({
-      generate: generateText,
-      generateObject,
-      model: openrouterModel(keys.openrouter, "moonshotai/kimi-k2.5"),
-      label: "openrouter",
-    });
-    models.push("openrouter");
+    const { result, label } = await runOpenRouterCascade(
+      keys.openrouter,
+      [PAID_OPENROUTER_FALLBACK],
+      run,
+    );
+    models.push(label);
     return { result, meta: { models, claude_down } };
   }
 
   throw new Error(
-    "Research needs a Claude key (or Kimi / OpenRouter fallback). Add one in Profile → API keys.",
+    "Research needs a Claude key (or Kimi / OpenRouter free models). Add one in Profile → API keys.",
   );
 }
 
@@ -100,16 +178,20 @@ export async function liveWebCheck(
   prompt: string,
 ): Promise<{ refused?: boolean; p?: number; text?: string; citations?: { url: string; note?: string }[] }> {
   if (!keys.openrouter) return { refused: true };
-  try {
-    const { text } = await generateText({
-      model: openrouterModel(keys.openrouter, "perplexity/sonar"),
-      prompt,
-      maxOutputTokens: 400,
-    });
-    return { p: 0.7, text, citations: [] };
-  } catch {
-    return { refused: true };
+  const ids = [...decisionModels(), "perplexity/sonar"];
+  for (const id of ids) {
+    try {
+      const { text } = await generateText({
+        model: openrouterModel(keys.openrouter, id),
+        prompt,
+        maxOutputTokens: 400,
+      });
+      return { p: 0.7, text, citations: [] };
+    } catch {
+      // try next free / paid decision model
+    }
   }
+  return { refused: true };
 }
 
 export const researchSchema = z.object({

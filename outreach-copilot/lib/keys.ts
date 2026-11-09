@@ -61,8 +61,17 @@ export async function testKey(
       }
       return { ok: true };
     }
-    const res = await fetch("https://openrouter.ai/api/v1/models", {
-      headers: { authorization: `Bearer ${key}` },
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        model: "openrouter/free",
+        messages: [{ role: "user", content: "ping" }],
+        max_tokens: 8,
+      }),
     });
     if (!res.ok) {
       const t = await res.text();

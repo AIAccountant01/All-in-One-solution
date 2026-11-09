@@ -20,10 +20,14 @@ Open http://localhost:3000 → **Profile** → add a Moonshot/Kimi or OpenRouter
 | Variable | Purpose |
 | --- | --- |
 | `MOONSHOT_API_KEY` | Kimi / Moonshot (server fallback) |
-| `OPENROUTER_API_KEY` | OpenRouter fallback + live-web check |
+| `OPENROUTER_API_KEY` | OpenRouter (free thinking/decision models first) |
+| `OPENROUTER_THINKING_MODELS` | Optional comma-separated free model ids for research/theses/draft |
+| `OPENROUTER_DECISION_MODELS` | Optional comma-separated free model ids for POC / live checks |
 | `ANTHROPIC_API_KEY` | Claude (optional) |
 | `APP_PASSCODE` | Lock APIs behind `x-passcode` |
 | `RESEND_API_KEY` / `FROM_EMAIL` | Optional email send on approve |
 | `DATABASE_URL` | Scheduled sequences (Postgres) |
+
+Default free models: Nemotron reasoning / Gemma 4 31B / Flint / `openrouter/free` for thinking; Gemma + Nemotron + `openrouter/free` for decision checks.
 
 Browser **Profile → API keys** override per request and stay in localStorage only.
