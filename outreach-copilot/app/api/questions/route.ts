@@ -1,4 +1,5 @@
-import { requirePasscode } from "@/lib/auth";
+import { requireApiAccess } from "@/lib/auth";
+import { limitLlm } from "@/lib/rate-limit";
 import { scoreCopy } from "@/lib/jev";
 import { keysFromRequest } from "@/lib/keys";
 import { questionsSchema, withModels } from "@/lib/llm";
@@ -7,8 +8,10 @@ import type { Person, Profile, Research, Thesis } from "@/lib/types";
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
-  const denied = requirePasscode(req);
-  if (denied) return denied;
+  const auth = await requireApiAccess(req);
+  if (auth instanceof Response) return auth;
+  const limited = limitLlm(auth.ownerId, "questions");
+  if (limited) return limited;
   try {
     const body = (await req.json()) as {
       research?: Research;

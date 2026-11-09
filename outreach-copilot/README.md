@@ -24,7 +24,7 @@ Open http://localhost:3000 → **Profile** → add a Moonshot/Kimi or OpenRouter
 | `OPENROUTER_THINKING_MODELS` | Optional comma-separated free model ids for research/theses/draft |
 | `OPENROUTER_DECISION_MODELS` | Optional comma-separated free model ids for POC / live checks |
 | `ANTHROPIC_API_KEY` | Claude (optional) |
-| `APP_PASSCODE` | Lock APIs behind `x-passcode` |
+| `APP_PASSCODE` | Extra lock behind `x-passcode` (published app also requires Cursor sign-in) |
 | `RESEND_API_KEY` / `FROM_EMAIL` | Optional email send on approve |
 | `DATABASE_URL` | Scheduled sequences (Postgres) |
 

@@ -1,10 +1,10 @@
-import { requirePasscode } from "@/lib/auth";
+import { requireApiAccess } from "@/lib/auth";
 import { scoreCopy } from "@/lib/jev";
 import type { Profile } from "@/lib/types";
 
 export async function POST(req: Request) {
-  const denied = requirePasscode(req);
-  if (denied) return denied;
+  const auth = await requireApiAccess(req);
+  if (auth instanceof Response) return auth;
   try {
     const body = (await req.json()) as {
       body?: string;
