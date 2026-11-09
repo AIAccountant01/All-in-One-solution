@@ -1,71 +1,88 @@
-# Outreach Copilot — setup for absolute beginners
+# Outreach Copilot — do exactly this (for beginners)
 
-This guide assumes you have never run a coding project before. Follow every step in order. Do not skip steps.
-
----
-
-## What you will end up with
-
-A website on your computer called **Outreach Copilot**.  
-You type a company name → it researches the company → it drafts cold emails.
+You do **not** need to know coding.  
+Just follow the steps **in order**. One step at a time.  
+If something looks wrong, stop and ask for help — do not invent your own steps.
 
 ---
 
-## Step 1 — Install Node.js (required)
+## Before you start — what you need
 
-1. Open this page in your browser: https://nodejs.org/
-2. Click the big green button that says **LTS** (Long Term Support).
-3. Download the installer for your computer (Mac or Windows).
-4. Open the downloaded file and click **Next / Continue / Install** until it finishes.
-5. Restart your computer (recommended).
+- A computer (Mac or Windows)
+- Internet
+- About 20–30 minutes the first time
+- The zip file someone sent you: `outreach-copilot-share.zip`
+- Later: your **own** API key (free options exist). You will get this in Step 7.
 
-### Check that it worked
+You do **not** need anyone else’s API keys.
 
-1. On **Mac**: open **Terminal** (Spotlight → type `Terminal` → Enter).  
-   On **Windows**: open **Command Prompt** or **PowerShell**.
-2. Type this exactly and press Enter:
+---
 
-```bash
+## Step 1 — Install Node.js
+
+Node.js is a free program. The app needs it to run.
+
+1. Open your browser (Chrome / Safari / Edge).
+2. Go to: **https://nodejs.org/**
+3. Click the big green button that says **LTS**.
+4. Save the installer.
+5. Open the installer.
+6. Click **Next / Continue / Agree / Install** until it says it finished.
+7. On Mac you may need your password.
+8. When done, **close and reopen** Terminal / Command Prompt (important).
+
+### Check Step 1 worked
+
+1. Open:
+   - **Mac:** Spotlight (Cmd+Space) → type `Terminal` → Enter  
+   - **Windows:** Start menu → type `cmd` → Enter (Command Prompt)
+2. Type this and press Enter:
+
+```text
 node -v
 ```
 
-3. You should see something like `v22.x.x` or `v20.x.x`.  
-   If you see “command not found”, Node.js is not installed — repeat Step 1.
+3. Good result = a version number, like `v22.11.0`  
+4. Bad result = `command not found` or similar → install failed. Redo Step 1.
 
-4. Also check npm:
+5. Also type:
 
-```bash
+```text
 npm -v
 ```
 
-You should see a number like `10.x.x`.
+Good result = a number like `10.9.0`.
+
+✅ Only continue when both commands show numbers.
 
 ---
 
-## Step 2 — Get the project folder
+## Step 2 — Unzip the project
 
-Someone will send you a file named something like:
-
-`outreach-copilot-share.zip`
-
-1. Download that zip to your computer (e.g. Downloads).
+1. Find `outreach-copilot-share.zip` (usually in **Downloads**).
 2. Unzip it:
-   - **Mac**: double-click the zip.
-   - **Windows**: right-click → **Extract All…**
-3. You should get a folder. Rename it to `outreach-copilot` if you want (optional).
-4. Move that folder somewhere easy, for example:
-   - Mac: `/Users/YOURNAME/Desktop/outreach-copilot`
-   - Windows: `C:\Users\YOURNAME\Desktop\outreach-copilot`
+   - **Mac:** double-click the zip
+   - **Windows:** right-click → **Extract All…** → Extract
+3. You should get a folder with files inside.
+4. Move that folder to your **Desktop**.
+5. Rename the folder to exactly:
+
+```text
+outreach-copilot
+```
+
+(Right-click → Rename.)
+
+Your Desktop should now have a folder named `outreach-copilot`.
 
 ---
 
-## Step 3 — Open a terminal inside the project folder
+## Step 3 — Open Terminal inside that folder
 
 ### Mac
 
 1. Open **Terminal**.
-2. Type `cd ` (with a space after cd), then drag the `outreach-copilot` folder into the Terminal window, then press Enter.  
-   Or type the full path, for example:
+2. Copy-paste this and press Enter:
 
 ```bash
 cd ~/Desktop/outreach-copilot
@@ -73,220 +90,221 @@ cd ~/Desktop/outreach-copilot
 
 ### Windows
 
-1. Open **Command Prompt** or **PowerShell**.
-2. Type:
+1. Open **Command Prompt**.
+2. Copy-paste this and press Enter:
 
-```bash
-cd Desktop\outreach-copilot
+```bat
+cd %USERPROFILE%\Desktop\outreach-copilot
 ```
 
-(If your folder is elsewhere, use that path instead.)
+### Check you are in the right folder
 
-### Confirm you are in the right place
-
-Type:
+Mac / PowerShell:
 
 ```bash
 ls
 ```
 
-(On Windows Command Prompt use `dir` instead of `ls`.)
+Windows Command Prompt:
 
-You should see files like `package.json`, `app`, `lib`, `README.md`.  
-If you do **not**, you are in the wrong folder — fix the `cd` path and try again.
+```bat
+dir
+```
+
+You **must** see names like:
+
+- `package.json`
+- `app`
+- `lib`
+- `SETUP-FOR-BEGINNERS.md`
+
+If you do not see those names, you are in the wrong folder. Fix the `cd` path and try again.
+
+✅ Stay in this same Terminal window for the next steps.
 
 ---
 
-## Step 4 — Install the project dependencies
+## Step 4 — Install the app pieces
 
-Still in that same terminal window, run:
+In that Terminal window, copy-paste this and press Enter:
 
 ```bash
 npm install
 ```
 
-Wait. This can take 1–3 minutes.  
-You will see lots of scrolling text. That is normal.
+What you will see:
 
-When it finishes, you should be back at a prompt with no big red error.  
-If you see `npm ERR!`, copy the last 20 lines and send them to whoever shared this project with you.
+- Lots of text scrolling
+- Waiting 1–3 minutes is normal
+- At the end you get your prompt back
+
+❌ If you see big red `npm ERR!` lines, copy the last screen of text and send it to whoever gave you the zip.
+
+✅ If there is no big red error, continue.
 
 ---
 
 ## Step 5 — Start the app
 
-In the same terminal, run:
+In the **same** Terminal window, copy-paste:
 
 ```bash
 npm run dev
 ```
 
-Leave this window open. Do not close it while you use the app.
+Good signs:
 
-You should see something like:
+- You see text about **Next.js**
+- You see something like `Local: http://localhost:3000`
+
+**Do not close this Terminal window.**  
+Closing it stops the app.
+
+Leave it open and go to Step 6.
+
+---
+
+## Step 6 — Open the website
+
+1. Open your browser.
+2. Click the address bar.
+3. Type exactly:
 
 ```text
-▲ Next.js ...
-- Local: http://localhost:3000
+http://localhost:3000
 ```
 
+4. Press Enter.
+
+You should see:
+
+- Title: **Outreach Copilot**
+- Tabs: **Run**, **Scheduled**, **History**, **Profile**
+
+If the page is blank / cannot connect:
+
+- Look at the Terminal from Step 5 — is it still running?
+- Try: `http://127.0.0.1:3000`
+- Ask for help with a screenshot of the Terminal
+
 ---
 
-## Step 6 — Open the app in your browser
+## Step 7 — Add YOUR API key (required)
 
-1. Open Chrome / Safari / Edge.
-2. Go to: http://localhost:3000
-3. You should see **Outreach Copilot** with tabs: Run, Scheduled, History, Profile.
+Without a key, **Research will fail**.
 
-If the page does not load:
+You need **at least one** key. Easiest free-ish options:
 
-- Make sure Step 5 is still running.
-- Try http://127.0.0.1:3000 instead.
-- Check the terminal for red errors.
+1. **OpenRouter** → https://openrouter.ai/  
+   Create account → Keys → Create key → copy it
+2. **Moonshot / Kimi** → https://platform.moonshot.ai/ or https://platform.kimi.ai/  
+   Create account → API key → copy it
 
----
+### Put the key into the app
 
-## Step 7 — Add at least one AI API key (required to Research)
-
-Without a key, Research will fail.
-
-You need **at least one** of these (Moonshot / Kimi or OpenRouter is enough to start):
-
-| Provider | Where to get a key | Where to paste it in the app |
-| --- | --- | --- |
-| Moonshot / Kimi | https://platform.moonshot.ai/ or https://platform.kimi.ai/ | Profile → API keys → Kimi / Moonshot |
-| OpenRouter | https://openrouter.ai/ | Profile → API keys → OpenRouter |
-| Anthropic (Claude) | https://console.anthropic.com/ | Profile → API keys → Anthropic |
-
-### How to paste a key in the app
-
-1. In the app, click **Profile** (top right).
-2. Scroll to **API keys**.
-3. Paste your key into the matching box.
+1. In the website, click **Profile** (top right).
+2. Scroll down to **API keys**.
+3. Paste your key in the matching box:
+   - OpenRouter key → OpenRouter box
+   - Moonshot/Kimi key → Kimi / Moonshot box
 4. Click **Save & test**.
-5. Wait for “Key works.”  
-   If it fails, the key is wrong, expired, or that model is not allowed on your account.
+5. Wait.
+6. Good = message like “Key works.”
+7. Bad = red error → key is wrong, or account has no access. Make a new key and try again.
 
-**Important:** Keys stay in **your browser only**. Do not commit keys into git. Do not email keys in plain text if you can avoid it.
+⚠️ Never send your key in a public chat.  
+⚠️ Do not put keys into random files unless someone who knows the project asks you to.
 
 ---
 
-## Step 8 — Run your first research
+## Step 8 — Try Research
 
-1. Click the **Run** tab.
-2. Type a company name (example: `Emergent` or `Desible.ai`).
-3. Click **Research**.
-4. Wait (can take 30–90 seconds).
-5. Follow the on-screen steps:
-   - Research results
+1. Click **Run** (top).
+2. In the box “Which company?”, type a real company, example:
+
+```text
+Stripe
+```
+
+3. Click the yellow **Research** button.
+4. Wait 30–90 seconds. Do not spam-click.
+5. Follow the screens:
+   - Read research
    - Build theses
    - Pick a person
-   - Answer a few questions
-   - Get your email sequence
+   - Answer short questions
+   - Get email drafts
+
+If you see an error in red:
+
+- Take a screenshot
+- Make sure Step 7 key still says it works
+- Try again once
+- Then ask for help with the screenshot
 
 ---
 
-## Step 9 — Stop the app when you are done
+## Step 9 — Stop the app
 
-1. Go back to the terminal where `npm run dev` is running.
-2. Press `Ctrl + C` (Mac and Windows).
-3. The site at http://localhost:3000 will stop working until you run Step 5 again.
+When you are done for the day:
+
+1. Click the Terminal window from Step 5.
+2. Press **Ctrl + C** (Windows and Mac).
+3. The site will stop. That is normal.
 
 ---
 
-## Step 10 — Next time you want to use it
+## Step 10 — Start it again tomorrow
+
+You do **not** need to unzip or `npm install` again.
 
 1. Open Terminal / Command Prompt.
-2. `cd` into the `outreach-copilot` folder (Step 3).
-3. Run `npm run dev` (Step 5).  
-   You do **not** need `npm install` again unless someone sent you a new zip.
-4. Open http://localhost:3000.
+2. Go to the folder again (same as Step 3).
+3. Run:
+
+```bash
+npm run dev
+```
+
+4. Open http://localhost:3000
+5. Your API key should still be saved in the browser (same computer + same browser).
 
 ---
 
-## Optional — deploy to the internet (Vercel)
+## Tiny checklist
 
-Only do this if you want a public URL for yourself (not just localhost).
+Print or tick these:
 
-1. Create a free account at https://vercel.com/
-2. Install Vercel CLI (in Terminal):
-
-```bash
-npm install -g vercel
-```
-
-3. In the `outreach-copilot` folder:
-
-```bash
-vercel login
-vercel
-```
-
-4. Follow the prompts (link to your account, accept defaults).
-5. In the Vercel project settings → **Environment Variables**, add any keys you want on the server:
-   - `MOONSHOT_API_KEY`
-   - `OPENROUTER_API_KEY`
-   - `ANTHROPIC_API_KEY` (optional)
-   - `APP_PASSCODE` (optional — locks the APIs)
-6. Redeploy after adding env vars.
+1. [ ] `node -v` works  
+2. [ ] Folder `outreach-copilot` is on Desktop  
+3. [ ] Terminal is inside that folder (`ls` / `dir` shows `package.json`)  
+4. [ ] `npm install` finished with no red error  
+5. [ ] `npm run dev` is running and left open  
+6. [ ] http://localhost:3000 shows Outreach Copilot  
+7. [ ] Profile → API key → Save & test works  
+8. [ ] Research on a company works  
 
 ---
 
-## Common problems
+## Common mistakes (read this)
 
-### “command not found: npm” or “node”
-
-Node.js is not installed or Terminal was not restarted. Redo Step 1, then reopen Terminal.
-
-### `npm install` fails
-
-- Check you are inside `outreach-copilot` (Step 3).
-- Make sure you have internet.
-- Try:
-
-```bash
-npm install --legacy-peer-deps
-```
-
-### Research says model not found / permission denied
-
-Your Moonshot/Kimi key may not include that model.  
-Add an **OpenRouter** key in Profile as well, then try again.
-
-### Research is slow or empty
-
-- Company name may be too vague — try the real website name.
-- DuckDuckGo search can be flaky; try again once.
-- Check your API key still has credits / free quota.
-
-### Port 3000 already in use
-
-Run on another port:
-
-```bash
-npm run dev -- -p 3001
-```
-
-Then open http://localhost:3001
+| Mistake | Fix |
+| --- | --- |
+| Closed the Terminal | Run `npm run dev` again |
+| Typed `npm install` in the wrong folder | `cd` to Desktop/outreach-copilot first |
+| Used someone else’s API key | Make your own key in Step 7 |
+| Opened the zip but never unzipped | Extract first (Step 2) |
+| Opened `file://...` instead of localhost | Use http://localhost:3000 |
+| Double-clicked random files inside the folder | Don’t. Use Terminal + browser only |
 
 ---
 
-## What this project is (short)
+## Still stuck?
 
-- **Folder:** `outreach-copilot`
-- **Stack:** Next.js (React) web app
-- **Flow:** Company → research → theses → contact → questions → email sequence
-- **Your keys:** used from Profile (browser) or server env vars
+Send **three screenshots** to the person who shared this:
 
----
+1. Your Terminal after `node -v` and `npm -v`
+2. Your Terminal after `npm install` / `npm run dev`
+3. The browser page (or the red error)
 
-## Checklist (print this)
-
-- [ ] Step 1: Node.js installed (`node -v` works)
-- [ ] Step 2: Unzipped the project
-- [ ] Step 3: Terminal is inside `outreach-copilot`
-- [ ] Step 4: `npm install` finished
-- [ ] Step 5: `npm run dev` is running
-- [ ] Step 6: http://localhost:3000 opens
-- [ ] Step 7: At least one API key saved & tested
-- [ ] Step 8: Research on a company works
+That is enough for them to help you.
