@@ -345,6 +345,32 @@ ${Object.entries(n.items)
     setErr("");
   };
 
+  const STEP_ORDER = [1, 2, 3, 3.5, 4, 5] as const;
+
+  const goBack = () => {
+    if (busy) return;
+    setErr("");
+    // Close approve sheet first
+    if (run.step === 5 && run.approve?.open) {
+      setRun({ ...run, approve: { ...run.approve, open: false } });
+      return;
+    }
+    // Within Q&A, go to the previous question before leaving the step
+    if (run.step === 4 && (run.qi || 0) > 0) {
+      setRun({ ...run, qi: (run.qi || 0) - 1 });
+      return;
+    }
+    const idx = STEP_ORDER.indexOf(run.step as (typeof STEP_ORDER)[number]);
+    if (idx <= 0) {
+      setRun({ step: 0 });
+      return;
+    }
+    const prev = STEP_ORDER[idx - 1]!;
+    setRun({ ...run, step: prev });
+  };
+
+  const canGoBack = (run.step || 0) > 1 || (run.step === 4 && (run.qi || 0) > 0) || !!run.approve?.open;
+
   return (
     <div className="wrap">
       <header>
@@ -404,10 +430,19 @@ ${Object.entries(n.items)
 
       {tab === "run" && (
         <>
-          <div className="steps">
-            {[1, 2, 3, 3.5, 4, 5].map((s) => (
-              <i key={s} className={(run.step || 1) >= s ? "on" : ""} />
-            ))}
+          <div className="row" style={{ marginBottom: 8, alignItems: "center" }}>
+            {canGoBack ? (
+              <button className="btn ghost" type="button" disabled={!!busy} onClick={goBack}>
+                ← Back
+              </button>
+            ) : (
+              <span />
+            )}
+            <div className="steps grow" style={{ margin: 0, justifyContent: "flex-end" }}>
+              {STEP_ORDER.map((s) => (
+                <i key={s} className={(run.step || 1) >= s ? "on" : ""} />
+              ))}
+            </div>
           </div>
 
           {(run.step || 0) <= 1 && (
@@ -671,9 +706,18 @@ ${Object.entries(n.items)
                         onChange={(e) => setRun({ ...run, extra: e.target.value })}
                         placeholder="Optional notes"
                       />
-                      <button className="btn" style={{ marginTop: 10 }} disabled={!!busy} onClick={doDraft}>
-                        Build my sequence →
-                      </button>
+                      <div className="row" style={{ marginTop: 10, gap: 8 }}>
+                        <button
+                          className="btn ghost"
+                          type="button"
+                          onClick={() => setRun({ ...run, qi: Math.max(0, run.qa!.length - 1) })}
+                        >
+                          ← Back
+                        </button>
+                        <button className="btn" disabled={!!busy} onClick={doDraft}>
+                          Build my sequence →
+                        </button>
+                      </div>
                     </>
                   );
                 }
@@ -698,7 +742,16 @@ ${Object.entries(n.items)
                         setRun({ ...run, qa });
                       }}
                     />
-                    <div className="row" style={{ marginTop: 10 }}>
+                    <div className="row" style={{ marginTop: 10, gap: 8 }}>
+                      {a > 0 && (
+                        <button
+                          className="btn ghost"
+                          type="button"
+                          onClick={() => setRun({ ...run, qi: a - 1 })}
+                        >
+                          ← Back
+                        </button>
+                      )}
                       <button
                         className="btn"
                         onClick={() => setRun({ ...run, qi: a + 1 })}
