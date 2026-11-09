@@ -1,21 +1,29 @@
 # Outreach Copilot
 
-Company → researched signals (sources that load) → two problem theses → POC → questions → Jev-scored cold sequence.
+Company → researched signals (sources that actually load) → two problem theses → POC → questions → cold email sequence.
 
-Rebuild of [outreach-copilot-kappa.vercel.app](https://outreach-copilot-kappa.vercel.app) for Cursor publish.
+## New here?
 
-## Local
+**Read [SETUP-FOR-BEGINNERS.md](./SETUP-FOR-BEGINNERS.md)** — full Step 1 → Step 10 guide.
+
+## Quick start (if you already know Node)
 
 ```bash
 npm install
 npm run dev
 ```
 
-Optional env (also bindable as Cursor app secrets):
+Open http://localhost:3000 → **Profile** → add a Moonshot/Kimi or OpenRouter API key → **Run** → research a company.
 
-- `APP_PASSCODE` — gate API routes
-- `ANTHROPIC_API_KEY` / `MOONSHOT_API_KEY` / `OPENROUTER_API_KEY` — server fallbacks when browser keys are empty
-- `RESEND_API_KEY` + `FROM_EMAIL` — send Email 1 when approved for immediate send
-- `DATABASE_URL` — set automatically on publish when Postgres is enabled
+## Optional server env
 
-Browser Profile → API keys still override per request (stored only in localStorage).
+| Variable | Purpose |
+| --- | --- |
+| `MOONSHOT_API_KEY` | Kimi / Moonshot (server fallback) |
+| `OPENROUTER_API_KEY` | OpenRouter fallback + live-web check |
+| `ANTHROPIC_API_KEY` | Claude (optional) |
+| `APP_PASSCODE` | Lock APIs behind `x-passcode` |
+| `RESEND_API_KEY` / `FROM_EMAIL` | Optional email send on approve |
+| `DATABASE_URL` | Scheduled sequences (Postgres) |
+
+Browser **Profile → API keys** override per request and stay in localStorage only.
