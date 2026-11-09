@@ -23,10 +23,9 @@ export async function POST(req: Request) {
     }
     const company = body.research.name;
     const keys = keysFromRequest(req);
-    const hits = await searchWeb(
-      `${company} founder OR CEO OR "founder's office" OR COO OR "head of" site:linkedin.com OR site:theorg.com OR team`,
-    );
+    const hits = await searchWeb(`${company} leadership team founder CEO`);
     const { live } = await filterLiveSources(hits.slice(0, 8));
+    const liveUrls = new Set(live.map((l) => l.url));
 
     const { result, meta } = await withModels(
       keys,
@@ -35,7 +34,7 @@ export async function POST(req: Request) {
         model,
         schema: peopleSchema,
         prompt: `Find 1-4 real decision-makers at ${company} who fit this outreach thesis.
-Only include people with a source_url that appears in SOURCES (must load).
+Only include people with a source_url that appears EXACTLY in SOURCES (must be one of the listed URLs).
 Prefer founders / 0-to-1 owners / GTM or ops leaders matching: ${body.profile?.target || ""}
 Thesis: ${body.thesis?.title} — ${body.thesis?.org_signal}
 If you can infer a common email pattern from a source, set email_guess + pattern_example; never invent a verified email.
@@ -48,12 +47,8 @@ ${live.map((h, i) => `[${i}] ${h.title}\n${h.url}\n${h.snippet}`).join("\n\n") |
       { purpose: "decision" },
     );
 
-    const people = [];
-    for (const p of result.people) {
-      const ok = live.some((l) => l.url === p.source_url) || /^https?:\/\//.test(p.source_url);
-      if (!ok) continue;
-      people.push(p);
-    }
+    // Strict: only keep people whose source_url was in the live-verified set.
+    const people = (result.people || []).filter((p) => liveUrls.has(p.source_url));
 
     const check = await liveWebCheck(
       keys,

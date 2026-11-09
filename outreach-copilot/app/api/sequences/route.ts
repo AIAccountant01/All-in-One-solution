@@ -1,6 +1,6 @@
 import { requireApiAccess } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import { limitEmail, limitWrite } from "@/lib/rate-limit";
+import { limitWrite } from "@/lib/rate-limit";
 import { randomUUID } from "node:crypto";
 
 export async function GET(req: Request) {
@@ -104,38 +104,8 @@ export async function POST(req: Request) {
       ],
     );
 
-    // Only send immediately when the client explicitly opts in (Approve → Send now).
-    // Never auto-fire Resend just because a step timestamp is near — that burns quota.
-    const resend = process.env.RESEND_API_KEY?.trim();
-    const from = process.env.FROM_EMAIL?.trim() || "raghav.r@onplusone.in";
-    let emailed = false;
-    if (body.send_now && resend && steps[0] && !body.test) {
-      const emailLimited = await limitEmail(auth.ownerId);
-      if (!emailLimited) {
-        const first = steps[0];
-        const sent = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            authorization: `Bearer ${resend}`,
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            from,
-            to: body.to,
-            subject: body.subject,
-            text: first.body,
-          }),
-        }).catch(() => null);
-        emailed = !!sent?.ok;
-        if (emailed) {
-          steps[0] = { ...first, sent: true };
-          await sql(
-            `UPDATE sequences SET steps = $1, updated_at = NOW() WHERE id = $2 AND owner_id = $3`,
-            [JSON.stringify(steps), id, auth.ownerId],
-          );
-        }
-      }
-    }
+    // Schedule only — never call Resend from this route. Client-supplied
+    // send_now / to / subject must not trigger paid email sends here.
 
     return Response.json(
       {
@@ -146,7 +116,7 @@ export async function POST(req: Request) {
           steps,
           linkedin,
           status: "active",
-          emailed,
+          emailed: false,
         },
       },
       { headers: { "cache-control": "private, no-store" } },

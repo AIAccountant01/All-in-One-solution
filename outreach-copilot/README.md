@@ -21,11 +21,12 @@ Open http://localhost:3000 → **Profile** → add a Moonshot/Kimi or OpenRouter
 | --- | --- |
 | `MOONSHOT_API_KEY` | Kimi / Moonshot (server fallback) |
 | `OPENROUTER_API_KEY` | OpenRouter (free thinking/decision models first) |
+| `FIRECRAWL_API_KEY` | Firecrawl search + scrape for reliable research sources |
 | `OPENROUTER_THINKING_MODELS` | Optional comma-separated free model ids for research/theses/draft |
 | `OPENROUTER_DECISION_MODELS` | Optional comma-separated free model ids for POC / live checks |
 | `ANTHROPIC_API_KEY` | Claude (optional) |
 | `APP_PASSCODE` | Extra lock behind `x-passcode` (published app also requires Cursor sign-in) |
-| `RESEND_API_KEY` / `FROM_EMAIL` | Optional email send on approve |
+| `RESEND_API_KEY` / `FROM_EMAIL` | Reserved for a future send worker (not used on create) |
 | `DATABASE_URL` | Scheduled sequences (Postgres) |
 
 Default free models: Nemotron reasoning / Gemma 4 31B / Flint / `openrouter/free` for thinking; Gemma + Nemotron + `openrouter/free` for decision checks.

@@ -238,7 +238,85 @@ async function searchGoogleNewsRss(query: string): Promise<SearchHit[]> {
   }
 }
 
-/** Multi-provider search. Prefer simple queries (no boolean operators). */
+function firecrawlKey(): string {
+  return process.env.FIRECRAWL_API_KEY?.trim() || "";
+}
+
+async function searchFirecrawl(query: string): Promise<SearchHit[]> {
+  const key = firecrawlKey();
+  if (!key) return [];
+  try {
+    const res = await fetch("https://api.firecrawl.dev/v1/search", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${key}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        query,
+        limit: 8,
+        // Keep search light; we scrape selected URLs ourselves.
+        scrapeOptions: { formats: ["markdown"], onlyMainContent: true },
+      }),
+      signal: AbortSignal.timeout(25000),
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as {
+      success?: boolean;
+      data?: {
+        url?: string;
+        title?: string;
+        description?: string;
+        markdown?: string;
+      }[];
+    };
+    const hits: SearchHit[] = [];
+    for (const row of data.data || []) {
+      const url = row.url?.trim();
+      if (!url || !(await assertPublicHttpUrl(url))) continue;
+      hits.push({
+        url,
+        title: row.title || url,
+        snippet: (row.description || row.markdown || "").slice(0, 400),
+      });
+      if (hits.length >= 8) break;
+    }
+    return hits;
+  } catch {
+    return [];
+  }
+}
+
+async function scrapeFirecrawl(url: string): Promise<string> {
+  const key = firecrawlKey();
+  if (!key) return "";
+  if (!(await assertPublicHttpUrl(url))) return "";
+  try {
+    const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${key}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        url,
+        formats: ["markdown"],
+        onlyMainContent: true,
+      }),
+      signal: AbortSignal.timeout(25000),
+    });
+    if (!res.ok) return "";
+    const data = (await res.json()) as {
+      success?: boolean;
+      data?: { markdown?: string };
+    };
+    return (data.data?.markdown || "").replace(/\s+/g, " ").trim().slice(0, 6000);
+  } catch {
+    return "";
+  }
+}
+
+/** Multi-provider search. Prefer Firecrawl when configured. */
 export async function searchWeb(query: string): Promise<SearchHit[]> {
   const clean = query.replace(/\s+/g, " ").trim();
   const seen = new Set<string>();
@@ -252,7 +330,10 @@ export async function searchWeb(query: string): Promise<SearchHit[]> {
     }
   };
 
-  add(await searchDdg(clean));
+  // Firecrawl first when the key is set (reliable sources for research).
+  add(await searchFirecrawl(clean));
+
+  if (out.length < 4) add(await searchDdg(clean));
   if (out.length < 4) add(await searchGoogleNewsRss(clean));
   if (out.length < 3) add(await searchWikipedia(clean));
 
@@ -267,6 +348,7 @@ export async function searchWeb(query: string): Promise<SearchHit[]> {
       .slice(0, 6)
       .join(" ");
     if (simple && simple !== clean) {
+      add(await searchFirecrawl(simple));
       add(await searchDdg(simple));
       if (out.length < 4) add(await searchGoogleNewsRss(simple));
       if (out.length < 3) add(await searchWikipedia(simple));
@@ -287,6 +369,10 @@ export async function filterLiveSources(
 }
 
 export async function fetchText(url: string): Promise<string> {
+  // Prefer Firecrawl scrape when configured (JS pages, paywalls less brittle).
+  const viaFc = await scrapeFirecrawl(url);
+  if (viaFc) return viaFc;
+
   const res = await safeFetch(url, { signal: AbortSignal.timeout(10000) });
   if (!res || !res.ok) return "";
   try {
