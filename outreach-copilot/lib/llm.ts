@@ -13,7 +13,7 @@ function anthropicModel(key: string, id = "claude-sonnet-4-5") {
   return createAnthropic({ apiKey: key })(id);
 }
 
-function moonshotModel(key: string, id = "kimi-k2-turbo-preview") {
+function moonshotModel(key: string, id = "kimi-k3.1-pro-highspeed") {
   return createOpenAI({
     apiKey: key,
     baseURL: "https://api.moonshot.ai/v1",
@@ -64,21 +64,26 @@ export async function withModels<T>(
   }
 
   if (keys.moonshot) {
-    const result = await run({
-      generate: generateText,
-      generateObject,
-      model: moonshotModel(keys.moonshot),
-      label: "kimi",
-    });
-    models.push("kimi");
-    return { result, meta: { models, claude_down } };
+    try {
+      const result = await run({
+        generate: generateText,
+        generateObject,
+        model: moonshotModel(keys.moonshot),
+        label: "kimi",
+      });
+      models.push("kimi");
+      return { result, meta: { models, claude_down } };
+    } catch (e) {
+      // Fall through to OpenRouter (deprecated/unavailable Kimi model ids, etc.)
+      if (!keys.openrouter) throw e;
+    }
   }
 
   if (keys.openrouter) {
     const result = await run({
       generate: generateText,
       generateObject,
-      model: openrouterModel(keys.openrouter, "anthropic/claude-sonnet-4.5"),
+      model: openrouterModel(keys.openrouter, "moonshotai/kimi-k2.5"),
       label: "openrouter",
     });
     models.push("openrouter");

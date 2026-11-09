@@ -50,7 +50,7 @@ export async function testKey(
           authorization: `Bearer ${key}`,
         },
         body: JSON.stringify({
-          model: "moonshot-v1-8k",
+          model: "kimi-k3.1-pro-highspeed",
           messages: [{ role: "user", content: "ping" }],
           max_tokens: 8,
         }),
