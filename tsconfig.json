@@ -37,6 +37,7 @@
   ],
   "exclude": [
     "node_modules",
-    "product-loop"
+    "product-loop",
+    "outreach-copilot"
   ]
 }
