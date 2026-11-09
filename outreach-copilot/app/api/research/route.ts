@@ -22,11 +22,16 @@ export async function POST(req: Request) {
       return Response.json({ error: "company required" }, { status: 400 });
     }
     const keys = keysFromRequest(req);
-    const hits = await searchWeb(
-      `${company} funding OR launch OR hiring OR product news -site:linkedin.com`,
-    );
-    const rolesHits = await searchWeb(`${company} careers OR "open roles" OR hiring`);
-    const { live, dropped } = await filterLiveSources([...hits, ...rolesHits].slice(0, 10));
+    // Keep queries simple — boolean operators often get blocked by search providers.
+    const [newsHits, fundingHits, roleHits, companyHits] = await Promise.all([
+      searchWeb(`${company} news`),
+      searchWeb(`${company} funding`),
+      searchWeb(`${company} hiring careers`),
+      searchWeb(company),
+    ]);
+    const merged = [...companyHits, ...newsHits, ...fundingHits, ...roleHits];
+    const dedup = new Map(merged.map((h) => [h.url, h]));
+    const { live, dropped } = await filterLiveSources([...dedup.values()].slice(0, 12));
     const pages = await Promise.all(
       live.slice(0, 6).map(async (h) => ({
         ...h,
