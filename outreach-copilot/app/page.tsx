@@ -224,6 +224,7 @@ export default function Page() {
   const [err, setErr] = useState("");
   const [own, setOwn] = useState("");
   const [showOwn, setShowOwn] = useState(false);
+  const [autopilot, setAutopilot] = useState(true);
 
   useEffect(() => {
     const p = ls("profile") as Profile | null;
@@ -250,46 +251,71 @@ export default function Page() {
     if (Array.isArray(h)) setHistory(h);
     const cur = ls("current") as RunState | null;
     if (cur?.step) setRun(cur);
+    const ap = ls("autopilot");
+    if (typeof ap === "boolean") setAutopilot(ap);
   }, []);
 
   useEffect(() => {
     if (run.step) ls("current", run);
   }, [run]);
 
+  async function request<T>(path: string, body: unknown): Promise<T> {
+    const res = await fetch(`/api/${path}`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+        "x-passcode": pass,
+        ...keyHeaders(),
+      },
+      body: JSON.stringify({ ...(body as object), profile }),
+    });
+    const raw = await res.text();
+    let data: { error?: string } & Record<string, unknown> = {};
+    try {
+      data = raw ? (JSON.parse(raw) as typeof data) : {};
+    } catch {
+      const looksHtml = /^\s*<!doctype|^\s*<html/i.test(raw);
+      throw new Error(
+        looksHtml
+          ? `Server returned a web page instead of data (HTTP ${res.status}). Try again in a moment — if it keeps happening, refresh and re-open the app.`
+          : `Bad server response (HTTP ${res.status}): ${raw.slice(0, 120) || "empty"}`,
+      );
+    }
+    if (!res.ok) throw new Error((data.error as string) || `Request failed (${res.status})`);
+    return data as T;
+  }
+
   async function api<T>(path: string, body: unknown, label: string): Promise<T | null> {
     setErr("");
     setBusy(label);
     try {
-      const res = await fetch(`/api/${path}`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          accept: "application/json",
-          "x-passcode": pass,
-          ...keyHeaders(),
-        },
-        body: JSON.stringify({ ...(body as object), profile }),
-      });
-      const raw = await res.text();
-      let data: { error?: string } & Record<string, unknown> = {};
-      try {
-        data = raw ? (JSON.parse(raw) as typeof data) : {};
-      } catch {
-        const looksHtml = /^\s*<!doctype|^\s*<html/i.test(raw);
-        throw new Error(
-          looksHtml
-            ? `Server returned a web page instead of data (HTTP ${res.status}). Try again in a moment — if it keeps happening, refresh and re-open the app.`
-            : `Bad server response (HTTP ${res.status}): ${raw.slice(0, 120) || "empty"}`,
-        );
-      }
-      if (!res.ok) throw new Error((data.error as string) || `Request failed (${res.status})`);
-      return data as T;
+      return await request<T>(path, body);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Request failed");
       return null;
     } finally {
       setBusy("");
     }
+  }
+
+  function normalizeResearch(data: Research, company: string): Research {
+    return {
+      ...data,
+      name: data.name?.trim() || company || "Company",
+      summary: data.summary?.trim() || "No usable summary from live sources yet.",
+      signals: data.signals || [],
+    };
+  }
+
+  function saveHistory(next: RunState) {
+    const company = next.research?.name || next.company || "";
+    const hist = [
+      { company, at: new Date().toISOString(), run: next },
+      ...history.filter((h) => h.company !== company),
+    ].slice(0, 30);
+    setHistory(hist);
+    ls("history", hist);
   }
 
   const doResearch = async () => {
@@ -302,12 +328,7 @@ export default function Page() {
     setRun({
       ...run,
       step: 2,
-      research: {
-        ...data,
-        name: data.name?.trim() || run.company || "Company",
-        summary: data.summary?.trim() || "No usable summary from live sources yet.",
-        signals: data.signals || [],
-      },
+      research: normalizeResearch(data, run.company || ""),
     });
   };
 
@@ -379,13 +400,86 @@ export default function Page() {
     if (data) {
       const next = { ...run, step: 5, seq: data, approve: null };
       setRun(next);
-      const company = run.research?.name || run.company || "";
-      const hist = [
-        { company, at: new Date().toISOString(), run: next },
-        ...history.filter((h) => h.company !== company),
-      ].slice(0, 30);
-      setHistory(hist);
-      ls("history", hist);
+      saveHistory(next);
+    }
+  };
+
+  const runAutopilot = async () => {
+    const company = (run.company || "").trim();
+    if (!company) return;
+    setErr("");
+    let next: RunState = { step: 1, company };
+    setRun(next);
+    try {
+      setBusy("1/4 Researching what's moving…");
+      const researchRaw = await request<Research>("research", { company });
+      if (!researchRaw.name?.trim() && !researchRaw.summary?.trim() && !(researchRaw.signals?.length > 0)) {
+        throw new Error("Research came back empty. Try again, or check Profile → API keys / server secrets.");
+      }
+      const research = normalizeResearch(researchRaw, company);
+      next = { ...next, step: 2, research };
+      setRun(next);
+
+      setBusy("2/4 Writing theses and picking the best…");
+      const thesesData = await request<{
+        theses: Thesis[];
+        recommend: number;
+        close: boolean;
+        models?: string[];
+        claude_down?: string | null;
+      }>("theses", { company, research });
+      if (!thesesData.theses?.length) throw new Error("No theses returned. Try step-by-step Research.");
+      const pick =
+        thesesData.recommend >= 0 && thesesData.theses[thesesData.recommend]
+          ? thesesData.recommend
+          : 0;
+      next = {
+        ...next,
+        step: 3,
+        theses: thesesData.theses,
+        recommend: thesesData.recommend,
+        close: thesesData.close,
+        thesesBy: { models: thesesData.models, claude_down: thesesData.claude_down },
+        pick,
+      };
+      setRun(next);
+
+      setBusy("3/4 Finding the right person to write to…");
+      const thesis = thesesData.theses[pick]!;
+      const pocs = await request<PocResult>("poc", { research, thesis });
+      const pocIdx = pocs.people?.[pocs.recommend] ? pocs.recommend : pocs.people?.length ? 0 : -1;
+      next = { ...next, step: 3.5, pocs, poc: pocIdx };
+      setRun(next);
+
+      setBusy("4/4 Drafting your sequence…");
+      const poc = pocIdx >= 0 ? pocs.people[pocIdx]! : null;
+      const seq = await request<SequenceDraft>("draft", {
+        research,
+        thesis,
+        poc,
+        qa: [
+          {
+            q: "Autopilot",
+            a: "Used recommended thesis and recipient. Draft from profile voice and live research; no extra Q&A.",
+          },
+        ],
+      });
+      next = {
+        ...next,
+        step: 5,
+        seq,
+        approve: null,
+        qa: [],
+        qi: 0,
+        extra: "",
+      };
+      setRun(next);
+      saveHistory(next);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Autopilot failed");
+      setRun(next);
+    } finally {
+      setBusy("");
     }
   };
 
@@ -542,21 +636,51 @@ ${Object.entries(n.items)
             <div className="card">
               <h3>Which company?</h3>
               <p className="mute">
-                I&apos;ll find what&apos;s moving there, with sources that actually load, then build two
-                problem theses for you.
+                Autopilot researches, picks the recommended thesis and person, then drafts a sequence.
+                Turn it off to go step by step.
               </p>
+              <label className="row" style={{ marginBottom: 10, gap: 8, alignItems: "center" }}>
+                <input
+                  type="checkbox"
+                  checked={autopilot}
+                  disabled={!!busy}
+                  onChange={(e) => {
+                    const on = e.target.checked;
+                    setAutopilot(on);
+                    ls("autopilot", on);
+                  }}
+                />
+                <span>
+                  Autopilot <span className="mute">· approve only at the end</span>
+                </span>
+              </label>
               <div className="row">
                 <input
                   className="grow"
-                  placeholder="e.g. Desible.ai"
+                  placeholder="e.g. NatWest"
                   value={run.company || ""}
                   onChange={(e) => setRun({ step: 1, company: e.target.value })}
-                  onKeyDown={(e) => e.key === "Enter" && run.company && doResearch()}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter" || !run.company || busy) return;
+                    if (autopilot) void runAutopilot();
+                    else void doResearch();
+                  }}
                 />
-                <button className="btn" disabled={!run.company || !!busy} onClick={doResearch}>
-                  Research
-                </button>
+                {autopilot ? (
+                  <button className="btn" disabled={!run.company || !!busy} onClick={() => void runAutopilot()}>
+                    Autopilot →
+                  </button>
+                ) : (
+                  <button className="btn" disabled={!run.company || !!busy} onClick={() => void doResearch()}>
+                    Research
+                  </button>
+                )}
               </div>
+              {autopilot && (
+                <p className="mute" style={{ marginTop: 8 }}>
+                  Prefer control? Uncheck Autopilot to review theses and people yourself.
+                </p>
+              )}
             </div>
           )}
 
@@ -861,6 +985,19 @@ ${Object.entries(n.items)
 
           {run.step === 5 && run.seq && (
             <>
+              {!run.qa?.length && (
+                <div className="card" style={{ borderColor: "var(--gold)" }}>
+                  <span className="lbl">Autopilot</span>
+                  <p style={{ margin: "6px 0 0" }}>
+                    Used the recommended thesis
+                    {run.pick != null && run.theses?.[run.pick] ? ` (“${run.theses[run.pick]!.title}”)` : ""}
+                    {run.poc != null && run.poc >= 0 && run.pocs?.people?.[run.poc]
+                      ? ` and ${run.pocs.people[run.poc]!.name}`
+                      : " and a generic recipient"}
+                    . Use ← Back to change picks, or Approve when it looks right.
+                  </p>
+                </div>
+              )}
               <h2>
                 Your sequence <Byline r={run.seq} />
               </h2>

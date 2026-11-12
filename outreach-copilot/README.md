@@ -13,7 +13,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000 → **Profile** → add a Moonshot/Kimi or OpenRouter API key → **Run** → research a company.
+Open http://localhost:3000 → **Profile** → add a Moonshot/Kimi or OpenRouter API key → **Run** → enter a company → **Autopilot** (default) for research → recommended thesis/person → sequence, or turn Autopilot off for step-by-step.
 
 ## Optional server env
 
